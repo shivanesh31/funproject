@@ -30,7 +30,7 @@ def main():
     if 'bets' not in st.session_state:
         st.session_state.bets = load_data()
     
-    st.title("💰 Betting Profit Calculator 💸")
+    st.title("💰 Shivanesh Betting Profit Calculator 💸")
     
     # Create tabs for different actions
     tab1, tab2 = st.tabs(["📝 Place New Bet", "🎯 Update Results"])
