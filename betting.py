@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
+import os
 
 def calculate_profit(stake, odds, result):
     """Calculate profit/loss based on stake, odds and result"""
@@ -10,16 +11,26 @@ def calculate_profit(stake, odds, result):
         return -stake
     return 0
 
+def load_data():
+    """Load betting data from CSV file"""
+    if os.path.exists('betting_data.csv'):
+        return pd.read_csv('betting_data.csv')
+    return pd.DataFrame(columns=[
+        'Date', 'Sport', 'Match', 'Bet Type', 'Stake', 'Odds', 'Result', 'Profit/Loss'
+    ])
+
+def save_data(df):
+    """Save betting data to CSV file"""
+    df.to_csv('betting_data.csv', index=False)
+
 def main():
     st.set_page_config(page_title="Betting Profit Calculator", layout="wide")
     
-    # Initialize session state for storing bets
+    # Load existing data
     if 'bets' not in st.session_state:
-        st.session_state.bets = pd.DataFrame(columns=[
-            'Date', 'Sport', 'Match', 'Bet Type', 'Stake', 'Odds', 'Result', 'Profit/Loss'
-        ])
+        st.session_state.bets = load_data()
     
-    st.title("💰 Shivanesh Betting Profit Calculator 💸")
+    st.title("💰 Betting Profit Calculator 💸")
     
     # Create tabs for different actions
     tab1, tab2 = st.tabs(["📝 Place New Bet", "🎯 Update Results"])
@@ -65,6 +76,7 @@ def main():
                 }])
                 
                 st.session_state.bets = pd.concat([st.session_state.bets, new_bet], ignore_index=True)
+                save_data(st.session_state.bets)  # Save after adding new bet
                 st.success("✅ Bet added successfully!")
     
     # Tab 2: Update Results
@@ -91,6 +103,7 @@ def main():
                             st.session_state.bets.loc[idx, 'Profit/Loss'] = calculate_profit(
                                 bet['Stake'], bet['Odds'], 'Win'
                             )
+                            save_data(st.session_state.bets)  # Save after updating
                             st.success("Updated as Win!")
                             st.rerun()
                     
@@ -100,6 +113,7 @@ def main():
                             st.session_state.bets.loc[idx, 'Profit/Loss'] = calculate_profit(
                                 bet['Stake'], bet['Odds'], 'Loss'
                             )
+                            save_data(st.session_state.bets)  # Save after updating
                             st.success("Updated as Loss!")
                             st.rerun()
     
@@ -138,10 +152,11 @@ def main():
         use_container_width=True
     )
     
-    # Add export capability
-    if st.button("📥 Export to CSV"):
-        st.session_state.bets.to_csv("betting_history.csv", index=False)
-        st.success("✅ Data exported to betting_history.csv!")
+    # Add backup capability
+    if st.button("📥 Backup Data"):
+        backup_filename = f"betting_history_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        st.session_state.bets.to_csv(backup_filename, index=False)
+        st.success(f"✅ Data backed up to {backup_filename}!")
 
 if __name__ == "__main__":
     main()
