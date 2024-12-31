@@ -19,7 +19,7 @@ def main():
             'Date', 'Sport', 'Match', 'Bet Type', 'Stake', 'Odds', 'Result', 'Profit/Loss'
         ])
     
-    st.title("💰 Sanmathi@SAMBAR Betting Profit Calculator 💸")
+    st.title("💰 Shivanesh Betting Profit Calculator 💸")
     
     # Create tabs for different actions
     tab1, tab2 = st.tabs(["📝 Place New Bet", "🎯 Update Results"])
