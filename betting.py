@@ -13,30 +13,38 @@ def calculate_profit(stake, odds, result):
 
 def load_data():
     """Load betting data from CSV file"""
-    if os.path.exists('betting_data.csv'):
-        df = pd.read_csv('betting_data.csv')
-        # Convert Date column to datetime
-        df['Date'] = pd.to_datetime(df['Date'])
-        return df
-    return pd.DataFrame(columns=[
-        'Date', 'Sport', 'Match', 'Bet Type', 'Stake', 'Odds', 'Result', 'Profit/Loss'
-    ])
+    try:
+        if os.path.exists('betting_data.csv'):
+            df = pd.read_csv('betting_data.csv')
+            df['Date'] = pd.to_datetime(df['Date'])
+            return df
+        return pd.DataFrame(columns=[
+            'Date', 'Sport', 'Match', 'Bet Type', 'Stake', 'Odds', 'Result', 'Profit/Loss'
+        ])
+    except Exception as e:
+        st.error(f"Error loading data: {e}")
+        return pd.DataFrame(columns=[
+            'Date', 'Sport', 'Match', 'Bet Type', 'Stake', 'Odds', 'Result', 'Profit/Loss'
+        ])
 
 def save_data(df):
     """Save betting data to CSV file"""
-    # Convert datetime to string format before saving
-    df_to_save = df.copy()
-    df_to_save['Date'] = df_to_save['Date'].dt.strftime('%Y-%m-%d')
-    df_to_save.to_csv('betting_data.csv', index=False)
+    try:
+        df_to_save = df.copy()
+        if not df_to_save.empty:
+            df_to_save['Date'] = pd.to_datetime(df_to_save['Date']).dt.strftime('%Y-%m-%d')
+        df_to_save.to_csv('betting_data.csv', index=False)
+    except Exception as e:
+        st.error(f"Error saving data: {e}")
 
 def main():
     st.set_page_config(page_title="Betting Profit Calculator", layout="wide")
     
-    # Load existing data
+    # Initialize session state for storing bets
     if 'bets' not in st.session_state:
         st.session_state.bets = load_data()
     
-    st.title("💰 Betting Profit Calculator 💸")
+    st.title("💰 Shivanesh Betting Profit Calculator 💸")
     
     # Create tabs for different actions
     tab1, tab2 = st.tabs(["📝 Place New Bet", "🎯 Update Results"])
@@ -82,7 +90,7 @@ def main():
                 }])
                 
                 st.session_state.bets = pd.concat([st.session_state.bets, new_bet], ignore_index=True)
-                save_data(st.session_state.bets)  # Save after adding new bet
+                save_data(st.session_state.bets)
                 st.success("✅ Bet added successfully!")
     
     # Tab 2: Update Results
@@ -96,7 +104,7 @@ def main():
             st.info("📝 No pending bets to update")
         else:
             for idx, bet in pending_bets.iterrows():
-                with st.expander(f"🎯 {bet['Match']} - {bet['Date']} ({bet['Sport']})"):
+                with st.expander(f"🎯 {bet['Match']} - {bet['Date'].strftime('%Y-%m-%d')} ({bet['Sport']})"):
                     st.write(f"🎲 Bet Type: {bet['Bet Type']}")
                     st.write(f"💵 Stake: RM{bet['Stake']:.2f}")
                     st.write(f"📊 Odds: {bet['Odds']:.2f}")
@@ -109,7 +117,7 @@ def main():
                             st.session_state.bets.loc[idx, 'Profit/Loss'] = calculate_profit(
                                 bet['Stake'], bet['Odds'], 'Win'
                             )
-                            save_data(st.session_state.bets)  # Save after updating
+                            save_data(st.session_state.bets)
                             st.success("Updated as Win!")
                             st.rerun()
                     
@@ -119,56 +127,54 @@ def main():
                             st.session_state.bets.loc[idx, 'Profit/Loss'] = calculate_profit(
                                 bet['Stake'], bet['Odds'], 'Loss'
                             )
-                            save_data(st.session_state.bets)  # Save after updating
+                            save_data(st.session_state.bets)
                             st.success("Updated as Loss!")
                             st.rerun()
     
     # Display Summary Statistics
-    st.header("📚 All Bets History")
-    display_df = st.session_state.bets.copy()
-    # Sort by date in descending order (newest first)
-    display_df = display_df.sort_values('Date', ascending=False)
-    # Format date for display
-    display_df['Date'] = display_df['Date'].dt.strftime('%Y-%m-%d')
-    st.dataframe(display_df, use_container_width=True)
-    
-    col1, col2, col3, col4 = st.columns(4)
-    
-    completed_bets = st.session_state.bets[st.session_state.bets['Result'] != 'Pending']
-    total_profit = completed_bets['Profit/Loss'].sum()
-    total_stake = completed_bets['Stake'].sum()
-    roi = (total_profit / total_stake * 100) if total_stake > 0 else 0
-    
-    with col1:
-        st.metric("🎯 Total Bets", len(st.session_state.bets))
-    with col2:
-        st.metric("💵 Total Stake", f"RM{total_stake:.2f}")
-    with col3:
-        st.metric("💰 Total Profit/Loss", f"RM{total_profit:.2f}")
-    with col4:
-        st.metric("📊 ROI", f"{roi:.1f}%")
-    
-    # Sport-wise breakdown
-    st.subheader("🏆 Sport-wise Performance")
-    sport_stats = completed_bets.groupby('Sport').agg({
-        'Profit/Loss': 'sum',
-        'Result': lambda x: (x == 'Win').sum() / len(x) * 100 if len(x) > 0 else 0
-    }).round(2)
-    sport_stats.columns = ['Profit/Loss (RM)', 'Win Rate (%)']
-    st.dataframe(sport_stats)
-    
-    # Display all bets
-    st.header("📚 All Bets History")
-    st.dataframe(
-        st.session_state.bets.sort_values('Date', ascending=False),
-        use_container_width=True
-    )
-    
-    # Add backup capability
-    if st.button("📥 Backup Data"):
-        backup_filename = f"betting_history_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-        st.session_state.bets.to_csv(backup_filename, index=False)
-        st.success(f"✅ Data backed up to {backup_filename}!")
+    if not st.session_state.bets.empty:
+        st.header("📈 Summary Statistics")
+        
+        col1, col2, col3, col4 = st.columns(4)
+        
+        completed_bets = st.session_state.bets[st.session_state.bets['Result'] != 'Pending']
+        total_profit = completed_bets['Profit/Loss'].sum()
+        total_stake = completed_bets['Stake'].sum()
+        roi = (total_profit / total_stake * 100) if total_stake > 0 else 0
+        
+        with col1:
+            st.metric("🎯 Total Bets", len(st.session_state.bets))
+        with col2:
+            st.metric("💵 Total Stake", f"RM{total_stake:.2f}")
+        with col3:
+            st.metric("💰 Total Profit/Loss", f"RM{total_profit:.2f}")
+        with col4:
+            st.metric("📊 ROI", f"{roi:.1f}%")
+        
+        # Sport-wise breakdown
+        st.subheader("🏆 Sport-wise Performance")
+        sport_stats = completed_bets.groupby('Sport').agg({
+            'Profit/Loss': 'sum',
+            'Result': lambda x: (x == 'Win').sum() / len(x) * 100 if len(x) > 0 else 0
+        }).round(2)
+        sport_stats.columns = ['Profit/Loss (RM)', 'Win Rate (%)']
+        st.dataframe(sport_stats)
+        
+        # Display all bets with proper date sorting
+        st.header("📚 All Bets History")
+        display_df = st.session_state.bets.copy()
+        display_df['Date'] = pd.to_datetime(display_df['Date'])
+        display_df = display_df.sort_values('Date', ascending=False)
+        display_df['Date'] = display_df['Date'].dt.strftime('%Y-%m-%d')
+        st.dataframe(display_df, use_container_width=True)
+        
+        # Add backup capability
+        if st.button("📥 Backup Data"):
+            backup_filename = f"betting_history_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+            df_to_save = st.session_state.bets.copy()
+            df_to_save['Date'] = pd.to_datetime(df_to_save['Date']).dt.strftime('%Y-%m-%d')
+            df_to_save.to_csv(backup_filename, index=False)
+            st.success(f"✅ Data backed up to {backup_filename}!")
 
 if __name__ == "__main__":
     main()
