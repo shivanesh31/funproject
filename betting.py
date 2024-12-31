@@ -14,14 +14,20 @@ def calculate_profit(stake, odds, result):
 def load_data():
     """Load betting data from CSV file"""
     if os.path.exists('betting_data.csv'):
-        return pd.read_csv('betting_data.csv')
+        df = pd.read_csv('betting_data.csv')
+        # Convert Date column to datetime
+        df['Date'] = pd.to_datetime(df['Date'])
+        return df
     return pd.DataFrame(columns=[
         'Date', 'Sport', 'Match', 'Bet Type', 'Stake', 'Odds', 'Result', 'Profit/Loss'
     ])
 
 def save_data(df):
     """Save betting data to CSV file"""
-    df.to_csv('betting_data.csv', index=False)
+    # Convert datetime to string format before saving
+    df_to_save = df.copy()
+    df_to_save['Date'] = df_to_save['Date'].dt.strftime('%Y-%m-%d')
+    df_to_save.to_csv('betting_data.csv', index=False)
 
 def main():
     st.set_page_config(page_title="Betting Profit Calculator", layout="wide")
@@ -30,7 +36,7 @@ def main():
     if 'bets' not in st.session_state:
         st.session_state.bets = load_data()
     
-    st.title("💰 Shivanesh Betting Profit Calculator 💸")
+    st.title("💰 Betting Profit Calculator 💸")
     
     # Create tabs for different actions
     tab1, tab2 = st.tabs(["📝 Place New Bet", "🎯 Update Results"])
@@ -118,7 +124,13 @@ def main():
                             st.rerun()
     
     # Display Summary Statistics
-    st.header("📈 Summary Statistics")
+    st.header("📚 All Bets History")
+    display_df = st.session_state.bets.copy()
+    # Sort by date in descending order (newest first)
+    display_df = display_df.sort_values('Date', ascending=False)
+    # Format date for display
+    display_df['Date'] = display_df['Date'].dt.strftime('%Y-%m-%d')
+    st.dataframe(display_df, use_container_width=True)
     
     col1, col2, col3, col4 = st.columns(4)
     
