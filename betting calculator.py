@@ -29,24 +29,41 @@ def get_user_file(username):
     """Get filename for user's betting data"""
     return f'betting_data_{username}.csv'
 
+def calculate_profit(stake, odds, result):
+    """Calculate profit/loss based on stake, odds and result"""
+    if result == "Win":
+        return stake * (odds - 1)
+    elif result == "Loss":
+        return -stake
+    return 0
+
 def load_data(username):
     """Load betting data for specific user"""
-    filename = get_user_file(username)
-    if os.path.exists(filename):
-        df = pd.read_csv(filename)
-        df['Date'] = pd.to_datetime(df['Date'])
-        return df
-    return pd.DataFrame(columns=[
-        'Date', 'Sport', 'Match', 'Bet Type', 'Stake', 'Odds', 'Result', 'Profit/Loss'
-    ])
+    try:
+        filename = get_user_file(username)
+        if os.path.exists(filename):
+            df = pd.read_csv(filename)
+            df['Date'] = pd.to_datetime(df['Date'])
+            return df
+        return pd.DataFrame(columns=[
+            'Date', 'Sport', 'Match', 'Bet Type', 'Stake', 'Odds', 'Result', 'Profit/Loss'
+        ])
+    except Exception as e:
+        st.error(f"Error loading data: {e}")
+        return pd.DataFrame(columns=[
+            'Date', 'Sport', 'Match', 'Bet Type', 'Stake', 'Odds', 'Result', 'Profit/Loss'
+        ])
 
 def save_data(df, username):
     """Save betting data for specific user"""
-    filename = get_user_file(username)
-    df_to_save = df.copy()
-    if not df_to_save.empty:
-        df_to_save['Date'] = pd.to_datetime(df_to_save['Date']).dt.strftime('%Y-%m-%d')
-    df_to_save.to_csv(filename, index=False)
+    try:
+        filename = get_user_file(username)
+        df_to_save = df.copy()
+        if not df_to_save.empty:
+            df_to_save['Date'] = pd.to_datetime(df_to_save['Date']).dt.strftime('%Y-%m-%d')
+        df_to_save.to_csv(filename, index=False)
+    except Exception as e:
+        st.error(f"Error saving data: {e}")
 
 def login_page():
     """Handle login and registration"""
@@ -90,12 +107,6 @@ def login_page():
                 save_users(users)
                 st.success("Registration successful! Please login.")
 
-[Previous betting calculator code remains the same, but with these modifications:
-1. Replace all save_data() calls with save_data(df, st.session_state['username'])
-2. Replace all load_data() calls with load_data(st.session_state['username'])
-3. Add logout button in the main interface
-4. Add username display in the title]
-
 def main():
     if 'logged_in' not in st.session_state:
         st.session_state['logged_in'] = False
@@ -112,7 +123,63 @@ def main():
 
     st.title(f"💰 Betting Tracker - {st.session_state['username']} 💸")
     
-    [Rest of the previous main() function code]
-
-if __name__ == "__main__":
-    main()
+    # Initialize session state for storing bets
+    if 'bets' not in st.session_state:
+        st.session_state.bets = load_data(st.session_state['username'])
+    
+    # Create tabs for different actions
+    tab1, tab2 = st.tabs(["📝 Place New Bet", "🎯 Update Results"])
+    
+    # Tab 1: Place New Bet
+    with tab1:
+        with st.form("bet_calculator"):
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                date = st.date_input("📅 Date", datetime.now())
+                sport = st.selectbox("🏆 Sport", ["Football", "NBA", "NHL", "NFL", "MLB", "NCAAF", "NCAAB", "UFC", 
+                                             "Boxing", "Tennis", "Golf", "Cricket", "Rugby", "Darts", "Snooker", 
+                                             "Esports", "Other"])
+                match = st.text_input("⚔️ Match (e.g., Team A vs Team B)")
+                
+            with col2:
+                bet_type = st.text_input("🎲 Bet Type")
+                stake = st.number_input("💵 Stake (RM)", min_value=0.0, step=5.0)
+                odds = st.number_input("📊 Odds", min_value=1.01, step=0.05, value=2.00)
+            
+            # Calculate potential profit
+            potential_profit = stake * (odds - 1)
+            st.write(f"💫 Potential Profit: RM{potential_profit:.2f}")
+            
+            submitted = st.form_submit_button("Add Bet")
+            
+            if submitted:
+                if not bet_type:
+                    st.error("Please enter a bet type")
+                    return
+                    
+                # Add new bet with Pending status
+                new_bet = pd.DataFrame([{
+                    'Date': date,
+                    'Sport': sport,
+                    'Match': match,
+                    'Bet Type': bet_type,
+                    'Stake': stake,
+                    'Odds': odds,
+                    'Result': 'Pending',
+                    'Profit/Loss': 0
+                }])
+                
+                st.session_state.bets = pd.concat([st.session_state.bets, new_bet], ignore_index=True)
+                save_data(st.session_state.bets, st.session_state['username'])
+                st.success("✅ Bet added successfully!")
+    
+    # Tab 2: Update Results
+    with tab2:
+        st.subheader("🎲 Update Pending Bets")
+        
+        # Get pending bets
+        pending_bets = st.session_state.bets[st.session_state.bets['Result'] == 'Pending']
+        
+        if pending_bets.empty:
+            st.info("📝 No pending bets to update
