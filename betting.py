@@ -67,7 +67,7 @@ def save_data(df, username):
 
 def login_page():
     """Handle login and registration"""
-    st.title("💰 Shivanesh Betting Tracker Login")
+    st.title("💰 Supreme Betting Tracker Login")
     
     tab1, tab2 = st.tabs(["Login", "Register"])
     
