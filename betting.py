@@ -43,11 +43,14 @@ def main():
     # Initialize session state for storing bets
     if 'bets' not in st.session_state:
         st.session_state.bets = load_data()
-    
+        
+     if 'confirm_delete' not in st.session_state:
+        st.session_state.confirm_delete = None
+         
     st.title("💰 Shivanesh Betting Profit Calculator 💸")
     
     # Create tabs for different actions
-    tab1, tab2 = st.tabs(["📝 Place New Bet", "🎯 Update Results"])
+     tab1, tab2, tab3 = st.tabs(["📝 Place New Bet", "🎯 Update Results", "🗑️ Manage Bets"])
     
     # Tab 1: Place New Bet
     with tab1:
@@ -130,7 +133,50 @@ def main():
                             save_data(st.session_state.bets)
                             st.success("Updated as Loss!")
                             st.rerun()
-    
+     with tab3:
+        st.subheader("🗑️ Delete Bets")
+        
+        if st.session_state.bets.empty:
+            st.info("No bets to manage")
+        else:
+            # Display all bets with delete buttons
+            display_df = st.session_state.bets.copy()
+            display_df['Date'] = pd.to_datetime(display_df['Date'])
+            display_df = display_df.sort_values('Date', ascending=False)
+
+            for idx, bet in display_df.iterrows():
+                with st.expander(f"{bet['Match']} - {bet['Date'].strftime('%Y-%m-%d')} ({bet['Sport']})"):
+                    col1, col2 = st.columns([3, 1])
+                    
+                    with col1:
+                        st.write(f"🎲 Bet Type: {bet['Bet Type']}")
+                        st.write(f"💵 Stake: RM{bet['Stake']:.2f}")
+                        st.write(f"📊 Odds: {bet['Odds']:.2f}")
+                        st.write(f"Result: {bet['Result']}")
+                        if bet['Result'] != 'Pending':
+                            st.write(f"Profit/Loss: RM{bet['Profit/Loss']:.2f}")
+                    
+                    with col2:
+                        # Two-step deletion process
+                        if st.session_state.confirm_delete == idx:
+                            if st.button("❗ Confirm Delete", key=f"confirm_{idx}"):
+                                st.session_state.bets = st.session_state.bets.drop(idx)
+                                save_data(st.session_state.bets, st.session_state['username'])
+                                st.session_state.confirm_delete = None
+                                st.success("Bet deleted successfully!")
+                                st.rerun()
+                            if st.button("Cancel", key=f"cancel_{idx}"):
+                                st.session_state.confirm_delete = None
+                                st.rerun()
+                        else:
+                            if st.button("🗑️ Delete", key=f"delete_{idx}"):
+                                st.session_state.confirm_delete = idx
+                                st.rerun()
+
+    # [Previous summary statistics and display code remains the same]
+
+if __name__ == "__main__":
+    main()
     # Display Summary Statistics
     if not st.session_state.bets.empty:
         st.header("📈 Summary Statistics")
