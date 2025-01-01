@@ -301,5 +301,7 @@ def main():
             df_to_save.to_csv(backup_filename, index=False)
             st.success(f"✅ Data backed up to {backup_filename}!")
 
+        st.markdown("<br>" * 5, unsafe_allow_html=True)
+
 if __name__ == "__main__":
     main()
