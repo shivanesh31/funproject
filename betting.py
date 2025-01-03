@@ -5,6 +5,7 @@ import os
 import hashlib
 import json
 
+# Helper Functions
 def make_hashed_password(password):
     """Create hashed password"""
     return hashlib.sha256(str.encode(password)).hexdigest()
@@ -65,9 +66,34 @@ def save_data(df, username):
     except Exception as e:
         st.error(f"Error saving data: {e}")
 
+def get_user_bankroll(username):
+    """Load user's bankroll data"""
+    try:
+        if os.path.exists('bankroll.json'):
+            with open('bankroll.json', 'r') as f:
+                bankrolls = json.load(f)
+                return bankrolls.get(username, 0)
+        return 0
+    except Exception:
+        return 0
+
+def save_user_bankroll(username, amount):
+    """Save user's bankroll data"""
+    try:
+        bankrolls = {}
+        if os.path.exists('bankroll.json'):
+            with open('bankroll.json', 'r') as f:
+                bankrolls = json.load(f)
+        bankrolls[username] = amount
+        with open('bankroll.json', 'w') as f:
+            json.dump(bankrolls, f)
+    except Exception as e:
+        st.error(f"Error saving bankroll: {e}")
+
+# Login Page Function
 def login_page():
     """Handle login and registration"""
-    st.title("💰 Supreme Betting Tracker Login")
+    st.title("💰 Betting Tracker Login")
     
     tab1, tab2 = st.tabs(["Login", "Register"])
     
@@ -91,6 +117,7 @@ def login_page():
             new_username = st.text_input("Choose Username")
             new_password = st.text_input("Choose Password", type="password")
             confirm_password = st.text_input("Confirm Password", type="password")
+            initial_bankroll = st.number_input("Initial Bankroll (RM)", min_value=0.0, step=100.0)
             submitted = st.form_submit_button("Register")
             
             if submitted:
@@ -105,8 +132,10 @@ def login_page():
                 
                 users[new_username] = make_hashed_password(new_password)
                 save_users(users)
+                save_user_bankroll(new_username, initial_bankroll)
                 st.success("Registration successful! Please login.")
 
+# Main Application Function
 def main():
     if 'logged_in' not in st.session_state:
         st.session_state['logged_in'] = False
@@ -121,14 +150,52 @@ def main():
         st.session_state['username'] = None
         st.rerun()
 
+    # Initialize session state for storing bets
+    if 'bets' not in st.session_state:
+        st.session_state.bets = load_data(st.session_state['username'])
+    
+    # Initialize bankroll
+    if 'bankroll' not in st.session_state:
+        st.session_state.bankroll = get_user_bankroll(st.session_state['username'])
+    
     if 'confirm_delete' not in st.session_state:
         st.session_state.confirm_delete = None
 
     st.title(f"💰 Betting Tracker - {st.session_state['username']} 💸")
+
+    # Bankroll Management in Sidebar
+    st.sidebar.markdown("---")
+    st.sidebar.header("💰 Bankroll Management")
     
-    # Initialize session state for storing bets
-    if 'bets' not in st.session_state:
-        st.session_state.bets = load_data(st.session_state['username'])
+    # Add/Remove funds
+    with st.sidebar.expander("Manage Funds"):
+        action = st.radio("Action", ["Add Funds", "Remove Funds"])
+        amount = st.number_input("Amount (RM)", min_value=0.0, step=10.0)
+        if st.button("Update Bankroll"):
+            if action == "Add Funds":
+                st.session_state.bankroll += amount
+            else:
+                if amount > st.session_state.bankroll:
+                    st.error("Insufficient funds!")
+                else:
+                    st.session_state.bankroll -= amount
+            save_user_bankroll(st.session_state['username'], st.session_state.bankroll)
+            st.success(f"Bankroll updated! New balance: RM{st.session_state.bankroll:.2f}")
+            st.rerun()
+
+    # Calculate available balance
+    pending_bets = st.session_state.bets[st.session_state.bets['Result'] == 'Pending']
+    pending_stakes = pending_bets['Stake'].sum()
+    available_balance = st.session_state.bankroll - pending_stakes
+
+    # Display balances
+    st.sidebar.metric("Current Bankroll", f"RM{st.session_state.bankroll:.2f}")
+    st.sidebar.metric("Available Balance", 
+                     f"RM{available_balance:.2f}",
+                     help="Current bankroll minus pending bet stakes")
+    
+    if pending_stakes > 0:
+        st.sidebar.write(f"🎲 Amount in pending bets: RM{pending_stakes:.2f}")
     
     # Create tabs for different actions
     tab1, tab2, tab3 = st.tabs(["📝 Place New Bet", "🎯 Update Results", "🗑️ Manage Bets"])
@@ -160,6 +227,10 @@ def main():
                 if not bet_type:
                     st.error("Please enter a bet type")
                     return
+                
+                if stake > available_balance:
+                    st.error("Insufficient available balance!")
+                    return
                     
                 # Add new bet with Pending status
                 new_bet = pd.DataFrame([{
@@ -176,14 +247,12 @@ def main():
                 st.session_state.bets = pd.concat([st.session_state.bets, new_bet], ignore_index=True)
                 save_data(st.session_state.bets, st.session_state['username'])
                 st.success("✅ Bet added successfully!")
-    
-    # Tab 2: Update Results
+
+# Tab 2: Update Results
     with tab2:
         st.subheader("🎲 Update Pending Bets")
         
         # Get pending bets
-        pending_bets = st.session_state.bets[st.session_state.bets['Result'] == 'Pending']
-        
         if pending_bets.empty:
             st.info("📝 No pending bets to update")
         else:
@@ -197,20 +266,19 @@ def main():
                     col1, col2 = st.columns(2)
                     with col1:
                         if st.button("🎉 Win", key=f"win_{idx}"):
+                            profit = calculate_profit(bet['Stake'], bet['Odds'], 'Win')
                             st.session_state.bets.loc[idx, 'Result'] = 'Win'
-                            st.session_state.bets.loc[idx, 'Profit/Loss'] = calculate_profit(
-                                bet['Stake'], bet['Odds'], 'Win'
-                            )
+                            st.session_state.bets.loc[idx, 'Profit/Loss'] = profit
+                            st.session_state.bankroll += profit + bet['Stake']  # Return stake plus profit
                             save_data(st.session_state.bets, st.session_state['username'])
+                            save_user_bankroll(st.session_state['username'], st.session_state.bankroll)
                             st.success("Updated as Win!")
                             st.rerun()
                     
                     with col2:
                         if st.button("❌ Loss", key=f"loss_{idx}"):
                             st.session_state.bets.loc[idx, 'Result'] = 'Loss'
-                            st.session_state.bets.loc[idx, 'Profit/Loss'] = calculate_profit(
-                                bet['Stake'], bet['Odds'], 'Loss'
-                            )
+                            st.session_state.bets.loc[idx, 'Profit/Loss'] = -bet['Stake']
                             save_data(st.session_state.bets, st.session_state['username'])
                             st.success("Updated as Loss!")
                             st.rerun()
@@ -222,7 +290,6 @@ def main():
         if st.session_state.bets.empty:
             st.info("No bets to manage")
         else:
-            # Display all bets with delete buttons
             display_df = st.session_state.bets.copy()
             display_df['Date'] = pd.to_datetime(display_df['Date'])
             display_df = display_df.sort_values('Date', ascending=False)
@@ -243,8 +310,11 @@ def main():
                         # Two-step deletion process
                         if st.session_state.confirm_delete == idx:
                             if st.button("❗ Confirm Delete", key=f"confirm_{idx}"):
+                                if bet['Result'] == 'Pending':
+                                    st.session_state.bankroll += bet['Stake']
                                 st.session_state.bets = st.session_state.bets.drop(idx)
                                 save_data(st.session_state.bets, st.session_state['username'])
+                                save_user_bankroll(st.session_state['username'], st.session_state.bankroll)
                                 st.session_state.confirm_delete = None
                                 st.success("Bet deleted successfully!")
                                 st.rerun()
@@ -255,7 +325,7 @@ def main():
                             if st.button("🗑️ Delete", key=f"delete_{idx}"):
                                 st.session_state.confirm_delete = idx
                                 st.rerun()
-    
+
     # Display Summary Statistics
     if not st.session_state.bets.empty:
         st.header("📈 Summary Statistics")
@@ -301,7 +371,8 @@ def main():
             df_to_save.to_csv(backup_filename, index=False)
             st.success(f"✅ Data backed up to {backup_filename}!")
 
-        st.markdown("<br>" * 5, unsafe_allow_html=True)
+    # Add extra space at bottom
+    st.markdown("<br>" * 5, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
