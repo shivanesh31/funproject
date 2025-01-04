@@ -377,7 +377,7 @@ def main():
                             save_data(st.session_state.bets, st.session_state['username'])
                             save_user_bankroll(st.session_state['username'], st.session_state.bankroll)
                             st.success("Updated as Win!")
-                            st.experimental_rerun()
+                            st.rerun()
                     
                     with col2:
                         if st.button("❌ Loss", key=f"loss_{idx}"):
@@ -386,7 +386,7 @@ def main():
                             # No need to modify bankroll for loss as stake is already deducted
                             save_data(st.session_state.bets, st.session_state['username'])
                             st.success("Updated as Loss!")
-                            st.experimental_rerun()
+                            st.rerun()
 
     # Tab 3: Manage Bets
     with tab3:
