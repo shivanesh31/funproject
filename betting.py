@@ -203,60 +203,58 @@ def main():
        # Add this code in the "Place New Bet" tab section, replace or modify the existing form:
     
         # Tab 1: Place New Bet
-        with tab1:
-            bet_type_choice = st.radio("Select Bet Type", ["Single", "Parlay"])
-            
-            if bet_type_choice == "Single":
-                with st.form("single_bet_calculator"):
-                    col1, col2 = st.columns(2)
-                    
-                    with col1:
-                        date = st.date_input("📅 Date", datetime.now())
-                        sport = st.selectbox("🏆 Sport", ["Football", "NBA", "NHL", "NFL", "MLB", "NCAAF", "NCAAB", "UFC", 
-                                                     "Boxing", "Tennis", "Golf", "Cricket", "Rugby", "Darts", "Snooker", 
-                                                     "Esports", "Other"])
-                        match = st.text_input("⚔️ Match (e.g., Team A vs Team B)")
-                        
-                    with col2:
-                        bet_type = st.text_input("🎲 Bet Type")
-                        stake = st.number_input("💵 Stake (RM)", min_value=0.0, step=5.0)
-                        odds = st.number_input("📊 Odds", min_value=1.01, step=0.05, value=2.00)
-                    
-                    potential_profit = stake * (odds - 1)
-                    st.write(f"💫 Potential Profit: RM{potential_profit:.2f}")
-                    
-                    submitted = st.form_submit_button("Add Single Bet")
-                    
-                    if submitted:
-                        if not bet_type:
-                            st.error("Please enter a bet type")
-                            return
-                        
-                        if stake > available_balance:
-                            st.error("Insufficient available balance!")
-                            return
-                            
-                        new_bet = pd.DataFrame([{
-                            'Date': date,
-                            'Sport': sport,
-                            'Match': match,
-                            'Bet Type': bet_type,
-                            'Stake': stake,
-                            'Odds': odds,
-                            'Result': 'Pending',
-                            'Profit/Loss': 0
-                        }])
-                        
-                        st.session_state.bets = pd.concat([st.session_state.bets, new_bet], ignore_index=True)
-                        save_data(st.session_state.bets, st.session_state['username'])
-                        st.success("✅ Bet added successfully!")
-            
-         # First, initialize parlay session state if not exists
-if 'num_parlay_picks' not in st.session_state:
-    st.session_state.num_parlay_picks = 2
+    with tab1:
+        # Initialize parlay session state if not exists
+        if 'num_parlay_picks' not in st.session_state:
+            st.session_state.num_parlay_picks = 2
 
-# In your Tab 1, replace the parlay section with:
-
+        bet_type_choice = st.radio("Select Bet Type", ["Single", "Parlay"])
+        
+        if bet_type_choice == "Single":
+            with st.form("single_bet_calculator"):
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    date = st.date_input("📅 Date", datetime.now())
+                    sport = st.selectbox("🏆 Sport", ["Football", "NBA", "NHL", "NFL", "MLB", "NCAAF", "NCAAB", "UFC", 
+                                                 "Boxing", "Tennis", "Golf", "Cricket", "Rugby", "Darts", "Snooker", 
+                                                 "Esports", "Other"])
+                    match = st.text_input("⚔️ Match (e.g., Team A vs Team B)")
+                    
+                with col2:
+                    bet_type = st.text_input("🎲 Bet Type")
+                    stake = st.number_input("💵 Stake (RM)", min_value=0.0, step=5.0)
+                    odds = st.number_input("📊 Odds", min_value=1.01, step=0.05, value=2.00)
+                
+                potential_profit = stake * (odds - 1)
+                st.write(f"💫 Potential Profit: RM{potential_profit:.2f}")
+                
+                submitted = st.form_submit_button("Add Single Bet")
+                
+                if submitted:
+                    if not bet_type:
+                        st.error("Please enter a bet type")
+                        return
+                    
+                    if stake > available_balance:
+                        st.error("Insufficient available balance!")
+                        return
+                        
+                    new_bet = pd.DataFrame([{
+                        'Date': date,
+                        'Sport': sport,
+                        'Match': match,
+                        'Bet Type': bet_type,
+                        'Stake': stake,
+                        'Odds': odds,
+                        'Result': 'Pending',
+                        'Profit/Loss': 0
+                    }])
+                    
+                    st.session_state.bets = pd.concat([st.session_state.bets, new_bet], ignore_index=True)
+                    save_data(st.session_state.bets, st.session_state['username'])
+                    st.success("✅ Bet added successfully!")
+        
         else:  # Parlay bet
             with st.form("parlay_bet_calculator"):
                 date = st.date_input("📅 Date", datetime.now())
@@ -359,7 +357,6 @@ if 'num_parlay_picks' not in st.session_state:
                     st.session_state.bets = pd.concat([st.session_state.bets, new_bet], ignore_index=True)
                     save_data(st.session_state.bets, st.session_state['username'])
                     st.success("✅ Parlay added successfully!")
-    
     
 
     
