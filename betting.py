@@ -378,6 +378,7 @@ def main():
                             st.session_state.bets.loc[idx, 'Result'] = 'Loss'
                             st.session_state.bets.loc[idx, 'Profit/Loss'] = -bet['Stake']
                             save_data(st.session_state.bets, st.session_state['username'])
+                            # Don't need to modify bankroll for loss as stake is already deducted
                             st.success("Updated as Loss!")
                             st.rerun()
 
