@@ -230,28 +230,33 @@ def main():
                 submitted = st.form_submit_button("Add Single Bet")
                 
                 if submitted:
-                    if not bet_type:
-                        st.error("Please enter a bet type")
-                        return
-                    
-                    if stake > available_balance:
-                        st.error("Insufficient available balance!")
-                        return
+                        if not bet_type:
+                            st.error("Please enter a bet type")
+                            return
                         
-                    new_bet = pd.DataFrame([{
-                        'Date': date,
-                        'Sport': sport,
-                        'Match': match,
-                        'Bet Type': bet_type,
-                        'Stake': stake,
-                        'Odds': odds,
-                        'Result': 'Pending',
-                        'Profit/Loss': 0
-                    }])
-                    
-                    st.session_state.bets = pd.concat([st.session_state.bets, new_bet], ignore_index=True)
-                    save_data(st.session_state.bets, st.session_state['username'])
-                    st.success("✅ Bet added successfully!")
+                        if stake > available_balance:
+                            st.error("Insufficient available balance!")
+                            return
+                            
+                        new_bet = pd.DataFrame([{
+                            'Date': date,
+                            'Sport': sport,
+                            'Match': match,
+                            'Bet Type': bet_type,
+                            'Stake': stake,
+                            'Odds': odds,
+                            'Result': 'Pending',
+                            'Profit/Loss': 0
+                        }])
+                        
+                        # Update bankroll immediately when placing bet
+                        st.session_state.bankroll -= stake
+                        save_user_bankroll(st.session_state['username'], st.session_state.bankroll)
+                        
+                        st.session_state.bets = pd.concat([st.session_state.bets, new_bet], ignore_index=True)
+                        save_data(st.session_state.bets, st.session_state['username'])
+                        st.success("✅ Bet added successfully!")
+                        st.experimental_rerun()
         
         else:
             with st.form("parlay_bet_calculator"):
@@ -367,20 +372,21 @@ def main():
                             profit = calculate_profit(bet['Stake'], bet['Odds'], 'Win')
                             st.session_state.bets.loc[idx, 'Result'] = 'Win'
                             st.session_state.bets.loc[idx, 'Profit/Loss'] = profit
-                            st.session_state.bankroll += profit + bet['Stake']  # Return stake plus profit
+                            # Add back stake plus profit
+                            st.session_state.bankroll += profit + bet['Stake']
                             save_data(st.session_state.bets, st.session_state['username'])
                             save_user_bankroll(st.session_state['username'], st.session_state.bankroll)
                             st.success("Updated as Win!")
-                            st.rerun()
+                            st.experimental_rerun()
                     
                     with col2:
                         if st.button("❌ Loss", key=f"loss_{idx}"):
                             st.session_state.bets.loc[idx, 'Result'] = 'Loss'
                             st.session_state.bets.loc[idx, 'Profit/Loss'] = -bet['Stake']
+                            # No need to modify bankroll for loss as stake is already deducted
                             save_data(st.session_state.bets, st.session_state['username'])
-                            # Don't need to modify bankroll for loss as stake is already deducted
                             st.success("Updated as Loss!")
-                            st.rerun()
+                            st.experimental_rerun()
 
     # Tab 3: Manage Bets
     with tab3:
