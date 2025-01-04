@@ -1,3 +1,3 @@
 # funproject
 
-Betiing Calculator for own use 
+Betiing Calculator for own use. 
