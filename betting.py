@@ -252,12 +252,11 @@ def main():
                     st.success("✅ Bet added successfully!")
         
       # First, initialize parlay session state if not exists
-if 'num_parlay_picks' not in st.session_state:
-    st.session_state.num_parlay_picks = 2
+
 
 # In your Tab 1, replace the parlay section with:
 
-        else:  # Parlay bet
+            else:  # Parlay bet
             with st.form("parlay_bet_calculator"):
                 date = st.date_input("📅 Date", datetime.now())
                 
