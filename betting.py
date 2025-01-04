@@ -256,7 +256,7 @@ def main():
                         st.session_state.bets = pd.concat([st.session_state.bets, new_bet], ignore_index=True)
                         save_data(st.session_state.bets, st.session_state['username'])
                         st.success("✅ Bet added successfully!")
-                        st.experimental_rerun()
+                        st.rerun()
         
         else:
             with st.form("parlay_bet_calculator"):
