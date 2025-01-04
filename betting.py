@@ -137,227 +137,227 @@ def login_page():
 
 # Main Application Function
 def main():
-    if 'logged_in' not in st.session_state:
-        st.session_state['logged_in'] = False
-
-    if not st.session_state['logged_in']:
-        login_page()
-        return
-
-    # Add logout button
-    if st.sidebar.button("Logout"):
-        st.session_state['logged_in'] = False
-        st.session_state['username'] = None
-        st.rerun()
-
-    # Initialize session state for storing bets
-    if 'bets' not in st.session_state:
-        st.session_state.bets = load_data(st.session_state['username'])
+        if 'logged_in' not in st.session_state:
+            st.session_state['logged_in'] = False
     
-    # Initialize bankroll
-    if 'bankroll' not in st.session_state:
-        st.session_state.bankroll = get_user_bankroll(st.session_state['username'])
+        if not st.session_state['logged_in']:
+            login_page()
+            return
     
-    if 'confirm_delete' not in st.session_state:
-        st.session_state.confirm_delete = None
-
-    st.title(f"💰 Betting Tracker - {st.session_state['username']} 💸")
-
-    # Bankroll Management in Sidebar
-    st.sidebar.markdown("---")
-    st.sidebar.header("💰 Bankroll Management")
-    
-    # Add/Remove funds
-    with st.sidebar.expander("Manage Funds"):
-        action = st.radio("Action", ["Add Funds", "Remove Funds"])
-        amount = st.number_input("Amount (RM)", min_value=0.0, step=10.0)
-        if st.button("Update Bankroll"):
-            if action == "Add Funds":
-                st.session_state.bankroll += amount
-            else:
-                if amount > st.session_state.bankroll:
-                    st.error("Insufficient funds!")
-                else:
-                    st.session_state.bankroll -= amount
-            save_user_bankroll(st.session_state['username'], st.session_state.bankroll)
-            st.success(f"Bankroll updated! New balance: RM{st.session_state.bankroll:.2f}")
+        # Add logout button
+        if st.sidebar.button("Logout"):
+            st.session_state['logged_in'] = False
+            st.session_state['username'] = None
             st.rerun()
-
-    # Calculate available balance
-    pending_bets = st.session_state.bets[st.session_state.bets['Result'] == 'Pending']
-    pending_stakes = pending_bets['Stake'].sum()
-    available_balance = st.session_state.bankroll - pending_stakes
-
-    # Display balances
-    st.sidebar.metric("Current Bankroll", f"RM{st.session_state.bankroll:.2f}")
-    st.sidebar.metric("Available Balance", 
-                     f"RM{available_balance:.2f}",
-                     help="Current bankroll minus pending bet stakes")
     
-    if pending_stakes > 0:
-        st.sidebar.write(f"🎲 Amount in pending bets: RM{pending_stakes:.2f}")
-    
-    # Create tabs for different actions
-    tab1, tab2, tab3 = st.tabs(["📝 Place New Bet", "🎯 Update Results", "🗑️ Manage Bets"])
-    
-   # Add this code in the "Place New Bet" tab section, replace or modify the existing form:
-
-    # Tab 1: Place New Bet
-    with tab1:
-        bet_type_choice = st.radio("Select Bet Type", ["Single", "Parlay"])
+        # Initialize session state for storing bets
+        if 'bets' not in st.session_state:
+            st.session_state.bets = load_data(st.session_state['username'])
         
-        if bet_type_choice == "Single":
-            with st.form("single_bet_calculator"):
-                col1, col2 = st.columns(2)
-                
-                with col1:
-                    date = st.date_input("📅 Date", datetime.now())
-                    sport = st.selectbox("🏆 Sport", ["Football", "NBA", "NHL", "NFL", "MLB", "NCAAF", "NCAAB", "UFC", 
-                                                 "Boxing", "Tennis", "Golf", "Cricket", "Rugby", "Darts", "Snooker", 
-                                                 "Esports", "Other"])
-                    match = st.text_input("⚔️ Match (e.g., Team A vs Team B)")
+        # Initialize bankroll
+        if 'bankroll' not in st.session_state:
+            st.session_state.bankroll = get_user_bankroll(st.session_state['username'])
+        
+        if 'confirm_delete' not in st.session_state:
+            st.session_state.confirm_delete = None
+    
+        st.title(f"💰 Betting Tracker - {st.session_state['username']} 💸")
+    
+        # Bankroll Management in Sidebar
+        st.sidebar.markdown("---")
+        st.sidebar.header("💰 Bankroll Management")
+        
+        # Add/Remove funds
+        with st.sidebar.expander("Manage Funds"):
+            action = st.radio("Action", ["Add Funds", "Remove Funds"])
+            amount = st.number_input("Amount (RM)", min_value=0.0, step=10.0)
+            if st.button("Update Bankroll"):
+                if action == "Add Funds":
+                    st.session_state.bankroll += amount
+                else:
+                    if amount > st.session_state.bankroll:
+                        st.error("Insufficient funds!")
+                    else:
+                        st.session_state.bankroll -= amount
+                save_user_bankroll(st.session_state['username'], st.session_state.bankroll)
+                st.success(f"Bankroll updated! New balance: RM{st.session_state.bankroll:.2f}")
+                st.rerun()
+    
+        # Calculate available balance
+        pending_bets = st.session_state.bets[st.session_state.bets['Result'] == 'Pending']
+        pending_stakes = pending_bets['Stake'].sum()
+        available_balance = st.session_state.bankroll - pending_stakes
+    
+        # Display balances
+        st.sidebar.metric("Current Bankroll", f"RM{st.session_state.bankroll:.2f}")
+        st.sidebar.metric("Available Balance", 
+                         f"RM{available_balance:.2f}",
+                         help="Current bankroll minus pending bet stakes")
+        
+        if pending_stakes > 0:
+            st.sidebar.write(f"🎲 Amount in pending bets: RM{pending_stakes:.2f}")
+        
+        # Create tabs for different actions
+        tab1, tab2, tab3 = st.tabs(["📝 Place New Bet", "🎯 Update Results", "🗑️ Manage Bets"])
+        
+       # Add this code in the "Place New Bet" tab section, replace or modify the existing form:
+    
+        # Tab 1: Place New Bet
+        with tab1:
+            bet_type_choice = st.radio("Select Bet Type", ["Single", "Parlay"])
+            
+            if bet_type_choice == "Single":
+                with st.form("single_bet_calculator"):
+                    col1, col2 = st.columns(2)
                     
-                with col2:
-                    bet_type = st.text_input("🎲 Bet Type")
-                    stake = st.number_input("💵 Stake (RM)", min_value=0.0, step=5.0)
-                    odds = st.number_input("📊 Odds", min_value=1.01, step=0.05, value=2.00)
-                
-                potential_profit = stake * (odds - 1)
-                st.write(f"💫 Potential Profit: RM{potential_profit:.2f}")
-                
-                submitted = st.form_submit_button("Add Single Bet")
-                
-                if submitted:
-                    if not bet_type:
-                        st.error("Please enter a bet type")
-                        return
-                    
-                    if stake > available_balance:
-                        st.error("Insufficient available balance!")
-                        return
+                    with col1:
+                        date = st.date_input("📅 Date", datetime.now())
+                        sport = st.selectbox("🏆 Sport", ["Football", "NBA", "NHL", "NFL", "MLB", "NCAAF", "NCAAB", "UFC", 
+                                                     "Boxing", "Tennis", "Golf", "Cricket", "Rugby", "Darts", "Snooker", 
+                                                     "Esports", "Other"])
+                        match = st.text_input("⚔️ Match (e.g., Team A vs Team B)")
                         
-                    new_bet = pd.DataFrame([{
-                        'Date': date,
-                        'Sport': sport,
-                        'Match': match,
-                        'Bet Type': bet_type,
-                        'Stake': stake,
-                        'Odds': odds,
-                        'Result': 'Pending',
-                        'Profit/Loss': 0
-                    }])
+                    with col2:
+                        bet_type = st.text_input("🎲 Bet Type")
+                        stake = st.number_input("💵 Stake (RM)", min_value=0.0, step=5.0)
+                        odds = st.number_input("📊 Odds", min_value=1.01, step=0.05, value=2.00)
                     
-                    st.session_state.bets = pd.concat([st.session_state.bets, new_bet], ignore_index=True)
-                    save_data(st.session_state.bets, st.session_state['username'])
-                    st.success("✅ Bet added successfully!")
-        
-      # First, initialize parlay session state if not exists
-
-
-# In your Tab 1, replace the parlay section with:
-
-            else:  # Parlay bet
-            with st.form("parlay_bet_calculator"):
-                date = st.date_input("📅 Date", datetime.now())
-                
-                # Control number of picks
-                col1, col2, col3 = st.columns([2,1,1])
-                with col1:
-                    st.write("Number of Picks:")
-                with col2:
-                    if st.form_submit_button("-"):
-                        if st.session_state.num_parlay_picks > 2:
-                            st.session_state.num_parlay_picks -= 1
-                            st.rerun()
-                with col3:
-                    if st.form_submit_button("+"):
-                        if st.session_state.num_parlay_picks < 10:
-                            st.session_state.num_parlay_picks += 1
-                            st.rerun()
-                
-                st.write(f"Current picks: {st.session_state.num_parlay_picks}")
-                st.markdown("---")
-                
-                # Store picks info
-                picks = []
-                total_odds = 1.0
-                
-                # Create input fields for each pick
-                for i in range(st.session_state.num_parlay_picks):
-                    st.markdown(f"### Pick {i+1}")
-                    pick_col1, pick_col2 = st.columns(2)
+                    potential_profit = stake * (odds - 1)
+                    st.write(f"💫 Potential Profit: RM{potential_profit:.2f}")
                     
-                    pick = {}
-                    with pick_col1:
-                        pick['Sport'] = st.selectbox(
-                            "Sport",
-                            ["Football", "NBA", "NHL", "NFL", "MLB", "NCAAF", "NCAAB", "UFC", 
-                             "Boxing", "Tennis", "Golf", "Cricket", "Rugby", "Darts", "Snooker", 
-                             "Esports", "Other"],
-                            key=f"sport_{i}"
-                        )
-                        pick['Match'] = st.text_input("Match", key=f"match_{i}")
+                    submitted = st.form_submit_button("Add Single Bet")
                     
-                    with pick_col2:
-                        pick['Bet Type'] = st.text_input("Bet Type", key=f"bet_{i}")
-                        pick['Odds'] = st.number_input(
-                            "Odds",
-                            min_value=1.01,
-                            step=0.05,
-                            value=2.00,
-                            key=f"odds_{i}"
-                        )
+                    if submitted:
+                        if not bet_type:
+                            st.error("Please enter a bet type")
+                            return
+                        
+                        if stake > available_balance:
+                            st.error("Insufficient available balance!")
+                            return
+                            
+                        new_bet = pd.DataFrame([{
+                            'Date': date,
+                            'Sport': sport,
+                            'Match': match,
+                            'Bet Type': bet_type,
+                            'Stake': stake,
+                            'Odds': odds,
+                            'Result': 'Pending',
+                            'Profit/Loss': 0
+                        }])
+                        
+                        st.session_state.bets = pd.concat([st.session_state.bets, new_bet], ignore_index=True)
+                        save_data(st.session_state.bets, st.session_state['username'])
+                        st.success("✅ Bet added successfully!")
+            
+          # First, initialize parlay session state if not exists
+    
+    
+    # In your Tab 1, replace the parlay section with:
+    
+                else:  # Parlay bet
+                with st.form("parlay_bet_calculator"):
+                    date = st.date_input("📅 Date", datetime.now())
                     
-                    picks.append(pick)
-                    total_odds *= pick['Odds']
+                    # Control number of picks
+                    col1, col2, col3 = st.columns([2,1,1])
+                    with col1:
+                        st.write("Number of Picks:")
+                    with col2:
+                        if st.form_submit_button("-"):
+                            if st.session_state.num_parlay_picks > 2:
+                                st.session_state.num_parlay_picks -= 1
+                                st.rerun()
+                    with col3:
+                        if st.form_submit_button("+"):
+                            if st.session_state.num_parlay_picks < 10:
+                                st.session_state.num_parlay_picks += 1
+                                st.rerun()
+                    
+                    st.write(f"Current picks: {st.session_state.num_parlay_picks}")
                     st.markdown("---")
-                
-                # Stake and calculations
-                stake = st.number_input("Total Stake (RM)", min_value=0.0, step=5.0)
-                potential_profit = stake * (total_odds - 1)
-                
-                # Summary
-                st.markdown("### Parlay Summary")
-                for i, pick in enumerate(picks):
-                    st.write(f"Pick {i+1}: {pick['Sport']} - {pick['Match']} - {pick['Bet Type']} @ {pick['Odds']:.2f}")
-                
-                st.markdown("### Total")
-                st.write(f"Combined Odds: {total_odds:.2f}")
-                st.write(f"Potential Profit: RM{potential_profit:.2f}")
-                
-                # Submit button
-                submitted = st.form_submit_button("Add Parlay")
-                
-                if submitted:
-                    # Validate inputs
-                    if any(not pick['Match'] or not pick['Bet Type'] for pick in picks):
-                        st.error("Please fill in all match and bet type information")
-                        return
                     
-                    if stake > available_balance:
-                        st.error("Insufficient available balance!")
-                        return
+                    # Store picks info
+                    picks = []
+                    total_odds = 1.0
                     
-                    # Create parlay description
-                    parlay_description = " | ".join(
-                        [f"{p['Sport']}: {p['Match']} ({p['Bet Type']})" for p in picks]
-                    )
+                    # Create input fields for each pick
+                    for i in range(st.session_state.num_parlay_picks):
+                        st.markdown(f"### Pick {i+1}")
+                        pick_col1, pick_col2 = st.columns(2)
+                        
+                        pick = {}
+                        with pick_col1:
+                            pick['Sport'] = st.selectbox(
+                                "Sport",
+                                ["Football", "NBA", "NHL", "NFL", "MLB", "NCAAF", "NCAAB", "UFC", 
+                                 "Boxing", "Tennis", "Golf", "Cricket", "Rugby", "Darts", "Snooker", 
+                                 "Esports", "Other"],
+                                key=f"sport_{i}"
+                            )
+                            pick['Match'] = st.text_input("Match", key=f"match_{i}")
+                        
+                        with pick_col2:
+                            pick['Bet Type'] = st.text_input("Bet Type", key=f"bet_{i}")
+                            pick['Odds'] = st.number_input(
+                                "Odds",
+                                min_value=1.01,
+                                step=0.05,
+                                value=2.00,
+                                key=f"odds_{i}"
+                            )
+                        
+                        picks.append(pick)
+                        total_odds *= pick['Odds']
+                        st.markdown("---")
                     
-                    # Add to bets
-                    new_bet = pd.DataFrame([{
-                        'Date': date,
-                        'Sport': "Parlay",
-                        'Match': parlay_description,
-                        'Bet Type': f"{st.session_state.num_parlay_picks}-Pick Parlay",
-                        'Stake': stake,
-                        'Odds': total_odds,
-                        'Result': 'Pending',
-                        'Profit/Loss': 0
-                    }])
+                    # Stake and calculations
+                    stake = st.number_input("Total Stake (RM)", min_value=0.0, step=5.0)
+                    potential_profit = stake * (total_odds - 1)
                     
-                    st.session_state.bets = pd.concat([st.session_state.bets, new_bet], ignore_index=True)
-                    save_data(st.session_state.bets, st.session_state['username'])
-                    st.success("✅ Parlay added successfully!")
+                    # Summary
+                    st.markdown("### Parlay Summary")
+                    for i, pick in enumerate(picks):
+                        st.write(f"Pick {i+1}: {pick['Sport']} - {pick['Match']} - {pick['Bet Type']} @ {pick['Odds']:.2f}")
+                    
+                    st.markdown("### Total")
+                    st.write(f"Combined Odds: {total_odds:.2f}")
+                    st.write(f"Potential Profit: RM{potential_profit:.2f}")
+                    
+                    # Submit button
+                    submitted = st.form_submit_button("Add Parlay")
+                    
+                    if submitted:
+                        # Validate inputs
+                        if any(not pick['Match'] or not pick['Bet Type'] for pick in picks):
+                            st.error("Please fill in all match and bet type information")
+                            return
+                        
+                        if stake > available_balance:
+                            st.error("Insufficient available balance!")
+                            return
+                        
+                        # Create parlay description
+                        parlay_description = " | ".join(
+                            [f"{p['Sport']}: {p['Match']} ({p['Bet Type']})" for p in picks]
+                        )
+                        
+                        # Add to bets
+                        new_bet = pd.DataFrame([{
+                            'Date': date,
+                            'Sport': "Parlay",
+                            'Match': parlay_description,
+                            'Bet Type': f"{st.session_state.num_parlay_picks}-Pick Parlay",
+                            'Stake': stake,
+                            'Odds': total_odds,
+                            'Result': 'Pending',
+                            'Profit/Loss': 0
+                        }])
+                        
+                        st.session_state.bets = pd.concat([st.session_state.bets, new_bet], ignore_index=True)
+                        save_data(st.session_state.bets, st.session_state['username'])
+                        st.success("✅ Parlay added successfully!")
 
 # Tab 2: Update Results
     with tab2:
