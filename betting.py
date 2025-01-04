@@ -204,54 +204,8 @@ def main():
     # Add this code in the "Place New Bet" tab section, replace or modify the existing form:
 
     # Tab 1: Place New Bet
-    with tab1:
-        bet_type_choice = st.radio("Select Bet Type", ["Single", "Parlay"])
-        
-        if bet_type_choice == "Single":
-            with st.form("single_bet_calculator"):
-                col1, col2 = st.columns(2)
-                
-                with col1:
-                    date = st.date_input("📅 Date", datetime.now())
-                    sport = st.selectbox("🏆 Sport", ["Football", "NBA", "NHL", "NFL", "MLB", "NCAAF", "NCAAB", "UFC", 
-                                                 "Boxing", "Tennis", "Golf", "Cricket", "Rugby", "Darts", "Snooker", 
-                                                 "Esports", "Other"])
-                    match = st.text_input("⚔️ Match (e.g., Team A vs Team B)")
-                    
-                with col2:
-                    bet_type = st.text_input("🎲 Bet Type")
-                    stake = st.number_input("💵 Stake (RM)", min_value=0.0, step=5.0)
-                    odds = st.number_input("📊 Odds", min_value=1.01, step=0.05, value=2.00)
-                
-                potential_profit = stake * (odds - 1)
-                st.write(f"💫 Potential Profit: RM{potential_profit:.2f}")
-                
-                submitted = st.form_submit_button("Add Single Bet")
-                
-                if submitted:
-                    if not bet_type:
-                        st.error("Please enter a bet type")
-                        return
-                    
-                    if stake > available_balance:
-                        st.error("Insufficient available balance!")
-                        return
-                        
-                    new_bet = pd.DataFrame([{
-                        'Date': date,
-                        'Sport': sport,
-                        'Match': match,
-                        'Bet Type': bet_type,
-                        'Stake': stake,
-                        'Odds': odds,
-                        'Result': 'Pending',
-                        'Profit/Loss': 0
-                    }])
-                    
-                    st.session_state.bets = pd.concat([st.session_state.bets, new_bet], ignore_index=True)
-                    save_data(st.session_state.bets, st.session_state['username'])
-                    st.success("✅ Bet added successfully!")
-        
+    # In the parlay section, modify the picks input part:
+
         else:  # Parlay bet
             with st.form("parlay_bet_calculator"):
                 date = st.date_input("📅 Date", datetime.now())
@@ -260,22 +214,35 @@ def main():
                 picks = []
                 total_odds = 1.0
                 
-                # Allow up to 10 picks in parlay
-                num_picks = st.number_input("Number of Picks", min_value=2, max_value=10, value=2)
+                # Number of picks with clear labels
+                st.markdown("### Number of Picks")
+                num_picks = st.slider("Select number of picks", min_value=2, max_value=10, value=2)
+                st.markdown("---")
                 
-                for i in range(num_picks):
+                # Create containers for each pick
+                for i in range(int(num_picks)):  # Ensure num_picks is treated as integer
                     st.markdown(f"### Pick {i+1}")
                     col1, col2 = st.columns(2)
                     
                     with col1:
-                        sport = st.selectbox(f"🏆 Sport", ["Football", "NBA", "NHL", "NFL", "MLB", "NCAAF", "NCAAB", "UFC", 
-                                                     "Boxing", "Tennis", "Golf", "Cricket", "Rugby", "Darts", "Snooker", 
-                                                     "Esports", "Other"], key=f"sport_{i}")
-                        match = st.text_input("⚔️ Match", key=f"match_{i}")
+                        sport = st.selectbox(
+                            "🏆 Sport",
+                            ["Football", "NBA", "NHL", "NFL", "MLB", "NCAAF", "NCAAB", "UFC", 
+                             "Boxing", "Tennis", "Golf", "Cricket", "Rugby", "Darts", "Snooker", 
+                             "Esports", "Other"],
+                            key=f"sport_pick_{i}"
+                        )
+                        match = st.text_input("⚔️ Match", key=f"match_pick_{i}")
                     
                     with col2:
-                        bet_type = st.text_input("🎲 Bet Type", key=f"bet_type_{i}")
-                        odds = st.number_input("📊 Odds", min_value=1.01, step=0.05, value=2.00, key=f"odds_{i}")
+                        bet_type = st.text_input("🎲 Bet Type", key=f"bet_type_pick_{i}")
+                        odds = st.number_input(
+                            "📊 Odds",
+                            min_value=1.01,
+                            step=0.05,
+                            value=2.00,
+                            key=f"odds_pick_{i}"
+                        )
                     
                     picks.append({
                         'Sport': sport,
@@ -284,12 +251,18 @@ def main():
                         'Odds': odds
                     })
                     total_odds *= odds
+                    st.markdown("---")  # Add separator between picks
                 
                 stake = st.number_input("💵 Total Stake (RM)", min_value=0.0, step=5.0)
                 potential_profit = stake * (total_odds - 1)
                 
+                # Display parlay summary
                 st.markdown("### Parlay Summary")
-                st.write(f"📊 Total Odds: {total_odds:.2f}")
+                for i, pick in enumerate(picks):
+                    st.write(f"Pick {i+1}: {pick['Match']} - {pick['Bet Type']} @ {pick['Odds']:.2f}")
+                
+                st.markdown("### Total")
+                st.write(f"📊 Combined Odds: {total_odds:.2f}")
                 st.write(f"💫 Potential Profit: RM{potential_profit:.2f}")
                 
                 submitted = st.form_submit_button("Add Parlay Bet")
@@ -305,7 +278,7 @@ def main():
                         return
                     
                     # Create parlay description
-                    parlay_description = " + ".join([f"{p['Match']} ({p['Bet Type']})" for p in picks])
+                    parlay_description = " | ".join([f"{p['Match']} ({p['Bet Type']})" for p in picks])
                     
                     new_bet = pd.DataFrame([{
                         'Date': date,
