@@ -203,8 +203,8 @@ def main():
        # Add this code in the "Place New Bet" tab section, replace or modify the existing form:
     
         # Tab 1: Place New Bet
+    
     with tab1:
-        # Initialize parlay session state if not exists
         if 'num_parlay_picks' not in st.session_state:
             st.session_state.num_parlay_picks = 2
 
@@ -255,11 +255,10 @@ def main():
                     save_data(st.session_state.bets, st.session_state['username'])
                     st.success("✅ Bet added successfully!")
         
-        else:  # Parlay bet
+        else:
             with st.form("parlay_bet_calculator"):
                 date = st.date_input("📅 Date", datetime.now())
                 
-                # Control number of picks
                 col1, col2, col3 = st.columns([2,1,1])
                 with col1:
                     st.write("Number of Picks:")
@@ -277,11 +276,9 @@ def main():
                 st.write(f"Current picks: {st.session_state.num_parlay_picks}")
                 st.markdown("---")
                 
-                # Store picks info
                 picks = []
                 total_odds = 1.0
                 
-                # Create input fields for each pick
                 for i in range(st.session_state.num_parlay_picks):
                     st.markdown(f"### Pick {i+1}")
                     pick_col1, pick_col2 = st.columns(2)
@@ -311,11 +308,9 @@ def main():
                     total_odds *= pick['Odds']
                     st.markdown("---")
                 
-                # Stake and calculations
                 stake = st.number_input("Total Stake (RM)", min_value=0.0, step=5.0)
                 potential_profit = stake * (total_odds - 1)
                 
-                # Summary
                 st.markdown("### Parlay Summary")
                 for i, pick in enumerate(picks):
                     st.write(f"Pick {i+1}: {pick['Sport']} - {pick['Match']} - {pick['Bet Type']} @ {pick['Odds']:.2f}")
@@ -324,11 +319,9 @@ def main():
                 st.write(f"Combined Odds: {total_odds:.2f}")
                 st.write(f"Potential Profit: RM{potential_profit:.2f}")
                 
-                # Submit button
                 submitted = st.form_submit_button("Add Parlay")
                 
                 if submitted:
-                    # Validate inputs
                     if any(not pick['Match'] or not pick['Bet Type'] for pick in picks):
                         st.error("Please fill in all match and bet type information")
                         return
@@ -337,12 +330,10 @@ def main():
                         st.error("Insufficient available balance!")
                         return
                     
-                    # Create parlay description
                     parlay_description = " | ".join(
                         [f"{p['Sport']}: {p['Match']} ({p['Bet Type']})" for p in picks]
                     )
                     
-                    # Add to bets
                     new_bet = pd.DataFrame([{
                         'Date': date,
                         'Sport': "Parlay",
@@ -357,10 +348,6 @@ def main():
                     st.session_state.bets = pd.concat([st.session_state.bets, new_bet], ignore_index=True)
                     save_data(st.session_state.bets, st.session_state['username'])
                     st.success("✅ Parlay added successfully!")
-    
-
-    
-           
 # Tab 2: Update Results
     with tab2:
         st.subheader("🎲 Update Pending Bets")
