@@ -5,6 +5,17 @@ import os
 import hashlib
 import json
 
+st.markdown("""
+    <style>
+    .block-container {background-color: #8ab7ce;}
+    .st-emotion-cache-uf99v8 {background-color: #8ab7ce;}
+    .st-emotion-cache-1avcm0n {background-color: #8ab7ce !important;}
+    .stButton>button {background-color: #213e54 !important; color: white;}
+    div[data-testid="stMarkdownContainer"] {color: #27274a;}
+    .stTextInput>div>div>input {color: #27274a;}
+    .stSelectbox>div>div>div {background-color: #8ab7ce; color: #27274a;}
+    </style>
+""", unsafe_allow_html=True)
 # Helper Functions
 def make_hashed_password(password):
     """Create hashed password"""
