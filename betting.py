@@ -93,6 +93,34 @@ def save_user_bankroll(username, amount):
             json.dump(bankrolls, f)
     except Exception as e:
         st.error(f"Error saving bankroll: {e}")
+def load_transactions(username):
+    """Load transaction history for user"""
+    try:
+        filename = f'transactions_{username}.csv'
+        if os.path.exists(filename):
+            df = pd.read_csv(filename)
+            df['Date'] = pd.to_datetime(df['Date'])
+            return df
+        return pd.DataFrame(columns=[
+            'Date', 'Type', 'Amount', 'Balance_After'
+        ])
+    except Exception as e:
+        st.error(f"Error loading transactions: {e}")
+        return pd.DataFrame(columns=[
+            'Date', 'Type', 'Amount', 'Balance_After'
+        ])
+
+def save_transactions(df, username):
+    """Save transaction history"""
+    try:
+        filename = f'transactions_{username}.csv'
+        df_to_save = df.copy()
+        if not df_to_save.empty:
+            df_to_save['Date'] = pd.to_datetime(df_to_save['Date']).dt.strftime('%Y-%m-%d %H:%M:%S')
+        df_to_save.to_csv(filename, index=False)
+    except Exception as e:
+        st.error(f"Error saving transactions: {e}")
+        
 
 # Login Page Function
 def login_page():
@@ -176,37 +204,50 @@ def main():
     st.title(f"💰 Betting Tracker - {st.session_state['username']} 💸")
 
     # Bankroll Management in Sidebar
-    st.sidebar.markdown("---")
+     st.sidebar.markdown("---")
     st.sidebar.header("💰 Bankroll Management")
+    
+    # Initialize transactions
+    if 'transactions' not in st.session_state:
+        st.session_state.transactions = load_transactions(st.session_state['username'])
     
     # Add/Remove funds
     with st.sidebar.expander("Manage Funds"):
-        action = st.radio("Action", ["Add Funds", "Remove Funds"])
+        action = st.radio("Action", ["Deposit", "Withdraw"])
         amount = st.number_input("Amount (RM)", min_value=0.0, step=10.0)
-        if st.button("Update Bankroll"):
-            if action == "Add Funds":
+        note = st.text_input("Note (optional)")
+        
+        if st.button("Process Transaction"):
+            if action == "Deposit":
                 st.session_state.bankroll += amount
+                transaction_type = "Deposit"
             else:
                 if amount > st.session_state.bankroll:
                     st.error("Insufficient funds!")
-                else:
-                    st.session_state.bankroll -= amount
+                    st.rerun()
+                st.session_state.bankroll -= amount
+                transaction_type = "Withdraw"
+            
+            # Record transaction
+            new_transaction = pd.DataFrame([{
+                'Date': datetime.now(),
+                'Type': transaction_type,
+                'Amount': amount,
+                'Balance_After': st.session_state.bankroll,
+                'Note': note if note else '-'
+            }])
+            
+            st.session_state.transactions = pd.concat([
+                st.session_state.transactions, new_transaction
+            ], ignore_index=True)
+            
             save_user_bankroll(st.session_state['username'], st.session_state.bankroll)
-            st.success(f"Bankroll updated! New balance: RM{st.session_state.bankroll:.2f}")
+            save_transactions(st.session_state.transactions, st.session_state['username'])
+            st.success(f"{transaction_type} processed successfully!")
             st.rerun()
 
-    # Calculate available balance
-    pending_bets = st.session_state.bets[st.session_state.bets['Result'] == 'Pending']
-    pending_stakes = pending_bets['Stake'].sum()
-    available_balance = st.session_state.bankroll
-    
-    # Display balances
-    st.sidebar.metric("Current Bankroll", f"RM{st.session_state.bankroll:.2f}")
-    st.sidebar.metric("Available Balance", f"RM{available_balance:.2f}")
-    
-    
-    # Create tabs for different actions
-    tab1, tab2, tab3 = st.tabs(["📝 Place New Bet", "🎯 Update Results", "🗑️ Manage Bets"])
+    # Add a new tab for transaction history
+    tab1, tab2, tab3, tab4 = st.tabs(["📝 Place New Bet", "🎯 Update Results", "🗑️ Manage Bets", "💰 Transaction History"])
     
     # Tab 1: Place New Bet
    
@@ -485,6 +526,62 @@ def main():
 
     # Add extra space at bottom
     st.markdown("<br>" * 5, unsafe_allow_html=True)
+
+    with tab4:
+        st.subheader("💰 Transaction History")
+        
+        if st.session_state.transactions.empty:
+            st.info("No transactions yet")
+        else:
+            # Filter options
+            col1, col2 = st.columns(2)
+            with col1:
+                date_range = st.date_input(
+                    "Date Range",
+                    [st.session_state.transactions['Date'].min().date(),
+                     st.session_state.transactions['Date'].max().date()]
+                )
+            with col2:
+                transaction_type = st.multiselect(
+                    "Transaction Type",
+                    ["Deposit", "Withdraw"],
+                    ["Deposit", "Withdraw"]
+                )
+            
+            # Filter transactions
+            filtered_transactions = st.session_state.transactions[
+                (st.session_state.transactions['Date'].dt.date >= date_range[0]) &
+                (st.session_state.transactions['Date'].dt.date <= date_range[1]) &
+                (st.session_state.transactions['Type'].isin(transaction_type))
+            ]
+            
+            # Display summary
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                total_deposits = filtered_transactions[
+                    filtered_transactions['Type'] == 'Deposit'
+                ]['Amount'].sum()
+                st.metric("Total Deposits", f"RM{total_deposits:.2f}")
+            
+            with col2:
+                total_withdrawals = filtered_transactions[
+                    filtered_transactions['Type'] == 'Withdraw'
+                ]['Amount'].sum()
+                st.metric("Total Withdrawals", f"RM{total_withdrawals:.2f}")
+            
+            with col3:
+                net_flow = total_deposits - total_withdrawals
+                st.metric("Net Flow", f"RM{net_flow:.2f}")
+            
+            # Display transactions table
+            st.dataframe(
+                filtered_transactions.sort_values('Date', ascending=False)
+                .style.format({
+                    'Amount': 'RM{:.2f}'.format,
+                    'Balance_After': 'RM{:.2f}'.format
+                }),
+                use_container_width=True
+            )
 
 if __name__ == "__main__":
     main()
