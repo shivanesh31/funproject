@@ -5,17 +5,6 @@ import os
 import hashlib
 import json
 
-st.markdown("""
-    <style>
-    .block-container {background-color: #8ab7ce;}
-    .st-emotion-cache-uf99v8 {background-color: #8ab7ce;}
-    .st-emotion-cache-1avcm0n {background-color: #8ab7ce !important;}
-    .stButton>button {background-color: #213e54 !important; color: white;}
-    div[data-testid="stMarkdownContainer"] {color: #27274a;}
-    .stTextInput>div>div>input {color: #27274a;}
-    .stSelectbox>div>div>div {background-color: #8ab7ce; color: #27274a;}
-    </style>
-""", unsafe_allow_html=True)
 # Helper Functions
 def make_hashed_password(password):
     """Create hashed password"""
@@ -93,7 +82,8 @@ def save_user_bankroll(username, amount):
             json.dump(bankrolls, f)
     except Exception as e:
         st.error(f"Error saving bankroll: {e}")
-        
+
+
 def load_transactions(username):
     """Load transaction history for user"""
     try:
@@ -208,46 +198,33 @@ def main():
     st.sidebar.markdown("---")
     st.sidebar.header("💰 Bankroll Management")
     
-    # Initialize transactions
-    if 'transactions' not in st.session_state:
-        st.session_state.transactions = load_transactions(st.session_state['username'])
-    
     # Add/Remove funds
     with st.sidebar.expander("Manage Funds"):
-        action = st.radio("Action", ["Deposit", "Withdraw"])
+        action = st.radio("Action", ["Add Funds", "Remove Funds"])
         amount = st.number_input("Amount (RM)", min_value=0.0, step=10.0)
-        note = st.text_input("Note (optional)")
-        
-        if st.button("Process Transaction"):
-            if action == "Deposit":
+        if st.button("Update Bankroll"):
+            if action == "Add Funds":
                 st.session_state.bankroll += amount
-                transaction_type = "Deposit"
             else:
                 if amount > st.session_state.bankroll:
                     st.error("Insufficient funds!")
-                    st.rerun()
-                st.session_state.bankroll -= amount
-                transaction_type = "Withdraw"
-            
-            # Record transaction
-            new_transaction = pd.DataFrame([{
-                'Date': datetime.now(),
-                'Type': transaction_type,
-                'Amount': amount,
-                'Balance_After': st.session_state.bankroll,
-                'Note': note if note else '-'
-            }])
-            
-            st.session_state.transactions = pd.concat([
-                st.session_state.transactions, new_transaction
-            ], ignore_index=True)
-            
+                else:
+                    st.session_state.bankroll -= amount
             save_user_bankroll(st.session_state['username'], st.session_state.bankroll)
-            save_transactions(st.session_state.transactions, st.session_state['username'])
-            st.success(f"{transaction_type} processed successfully!")
+            st.success(f"Bankroll updated! New balance: RM{st.session_state.bankroll:.2f}")
             st.rerun()
 
-    # Add a new tab for transaction history
+    # Calculate available balance
+    pending_bets = st.session_state.bets[st.session_state.bets['Result'] == 'Pending']
+    pending_stakes = pending_bets['Stake'].sum()
+    available_balance = st.session_state.bankroll
+    
+    # Display balances
+    st.sidebar.metric("Current Bankroll", f"RM{st.session_state.bankroll:.2f}")
+    st.sidebar.metric("Available Balance", f"RM{available_balance:.2f}")
+    
+    
+    # Create tabs for different actions
     tab1, tab2, tab3, tab4 = st.tabs(["📝 Place New Bet", "🎯 Update Results", "🗑️ Manage Bets", "💰 Transaction History"])
     
     # Tab 1: Place New Bet
@@ -479,16 +456,17 @@ def main():
                             if st.button("🗑️ Delete", key=f"delete_{idx}"):
                                 st.session_state.confirm_delete = idx
                                 st.rerun()
-
+    
+    # Tab 3 code (all your existing delete bets code)
 
 # Add Tab 4 right here, before the Summary Statistics
     with tab4:
         st.subheader("💰 Transaction History")
-    
+        
         if 'transactions' not in st.session_state or st.session_state.transactions.empty:
             st.info("No transactions yet")
         else:
-        # Add filters
+            # Add filters
             col1, col2 = st.columns(2)
             with col1:
                 start_date = st.session_state.transactions['Date'].min().date()
@@ -512,7 +490,7 @@ def main():
                 (st.session_state.transactions['Type'].isin(transaction_type))
             )
             filtered_df = st.session_state.transactions[mask]
-    
+
             # Display summary metrics
             col1, col2, col3 = st.columns(3)
             
@@ -527,7 +505,7 @@ def main():
             with col3:
                 net_change = total_deposits - total_withdrawals
                 st.metric("Net Change", f"RM{net_change:.2f}")
-    
+
             # Display transaction history
             st.subheader("Transaction Details")
             
@@ -545,7 +523,7 @@ def main():
                 }),
                 use_container_width=True
             )
-    
+
             # Add export option
             if st.button("📥 Export Transaction History"):
                 csv = display_df.to_csv(index=False)
@@ -556,53 +534,54 @@ def main():
                     mime='text/csv'
                 )
 
-# Then your existing Summary Statistics code
-      if not st.session_state.bets.empty:
-            st.header("📈 Summary Statistics")
-            
-            col1, col2, col3, col4 = st.columns(4)
-            
-            completed_bets = st.session_state.bets[st.session_state.bets['Result'] != 'Pending']
-            total_profit = completed_bets['Profit/Loss'].sum()
-            total_stake = completed_bets['Stake'].sum()
-            roi = (total_profit / total_stake * 100) if total_stake > 0 else 0
-            
-            with col1:
-                st.metric("🎯 Total Bets", len(st.session_state.bets))
-            with col2:
-                st.metric("💵 Total Stake", f"RM{total_stake:.2f}")
-            with col3:
-                st.metric("💰 Total Profit/Loss", f"RM{total_profit:.2f}")
-            with col4:
-                st.metric("📊 ROI", f"{roi:.1f}%")
-            
-            # Sport-wise breakdown
-            st.subheader("🏆 Sport-wise Performance")
-            sport_stats = completed_bets.groupby('Sport').agg({
-                'Profit/Loss': 'sum',
-                'Result': lambda x: (x == 'Win').sum() / len(x) * 100 if len(x) > 0 else 0
-            }).round(2)
-            sport_stats.columns = ['Profit/Loss (RM)', 'Win Rate (%)']
-            st.dataframe(sport_stats)
-            
-            # Display all bets with proper date sorting
-            st.header("📚 All Bets History")
-            display_df = st.session_state.bets.copy()
-            display_df['Date'] = pd.to_datetime(display_df['Date'])
-            display_df = display_df.sort_values('Date', ascending=False)
-            display_df['Date'] = display_df['Date'].dt.strftime('%Y-%m-%d')
-            st.dataframe(display_df, use_container_width=True)
-            
-            # Add backup capability
-            if st.button("📥 Backup Data"):
-                backup_filename = f"betting_history_backup_{st.session_state['username']}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-                df_to_save = st.session_state.bets.copy()
-                df_to_save['Date'] = pd.to_datetime(df_to_save['Date']).dt.strftime('%Y-%m-%d')
-                df_to_save.to_csv(backup_filename, index=False)
-                st.success(f"✅ Data backed up to {backup_filename}!")
-    
-        # Add extra space at bottom
-        st.markdown("<br>" * 5, unsafe_allow_html=True)
+
+    # Display Summary Statistics
+    if not st.session_state.bets.empty:
+        st.header("📈 Summary Statistics")
+        
+        col1, col2, col3, col4 = st.columns(4)
+        
+        completed_bets = st.session_state.bets[st.session_state.bets['Result'] != 'Pending']
+        total_profit = completed_bets['Profit/Loss'].sum()
+        total_stake = completed_bets['Stake'].sum()
+        roi = (total_profit / total_stake * 100) if total_stake > 0 else 0
+        
+        with col1:
+            st.metric("🎯 Total Bets", len(st.session_state.bets))
+        with col2:
+            st.metric("💵 Total Stake", f"RM{total_stake:.2f}")
+        with col3:
+            st.metric("💰 Total Profit/Loss", f"RM{total_profit:.2f}")
+        with col4:
+            st.metric("📊 ROI", f"{roi:.1f}%")
+        
+        # Sport-wise breakdown
+        st.subheader("🏆 Sport-wise Performance")
+        sport_stats = completed_bets.groupby('Sport').agg({
+            'Profit/Loss': 'sum',
+            'Result': lambda x: (x == 'Win').sum() / len(x) * 100 if len(x) > 0 else 0
+        }).round(2)
+        sport_stats.columns = ['Profit/Loss (RM)', 'Win Rate (%)']
+        st.dataframe(sport_stats)
+        
+        # Display all bets with proper date sorting
+        st.header("📚 All Bets History")
+        display_df = st.session_state.bets.copy()
+        display_df['Date'] = pd.to_datetime(display_df['Date'])
+        display_df = display_df.sort_values('Date', ascending=False)
+        display_df['Date'] = display_df['Date'].dt.strftime('%Y-%m-%d')
+        st.dataframe(display_df, use_container_width=True)
+        
+        # Add backup capability
+        if st.button("📥 Backup Data"):
+            backup_filename = f"betting_history_backup_{st.session_state['username']}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+            df_to_save = st.session_state.bets.copy()
+            df_to_save['Date'] = pd.to_datetime(df_to_save['Date']).dt.strftime('%Y-%m-%d')
+            df_to_save.to_csv(backup_filename, index=False)
+            st.success(f"✅ Data backed up to {backup_filename}!")
+
+    # Add extra space at bottom
+    st.markdown("<br>" * 5, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
