@@ -529,13 +529,8 @@ def main():
     st.markdown("<br>" * 5, unsafe_allow_html=True)
 
 
-
-    # Tab 3 code (all your existing delete bets code)
-with tab3:
-    # Your existing Tab 3 code...
-
 # Add Tab 4 right here, before the Summary Statistics
-with tab4:
+    with tab4:
     st.subheader("💰 Transaction History")
     
     if 'transactions' not in st.session_state or st.session_state.transactions.empty:
