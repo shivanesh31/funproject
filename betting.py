@@ -93,6 +93,7 @@ def save_user_bankroll(username, amount):
             json.dump(bankrolls, f)
     except Exception as e:
         st.error(f"Error saving bankroll: {e}")
+        
 def load_transactions(username):
     """Load transaction history for user"""
     try:
@@ -102,12 +103,12 @@ def load_transactions(username):
             df['Date'] = pd.to_datetime(df['Date'])
             return df
         return pd.DataFrame(columns=[
-            'Date', 'Type', 'Amount', 'Balance_After'
+            'Date', 'Type', 'Amount', 'Balance_After', 'Note'
         ])
     except Exception as e:
         st.error(f"Error loading transactions: {e}")
         return pd.DataFrame(columns=[
-            'Date', 'Type', 'Amount', 'Balance_After'
+            'Date', 'Type', 'Amount', 'Balance_After', 'Note'
         ])
 
 def save_transactions(df, username):
