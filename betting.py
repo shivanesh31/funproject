@@ -486,75 +486,75 @@ def main():
         st.subheader("💰 Transaction History")
     
         if 'transactions' not in st.session_state or st.session_state.transactions.empty:
-        st.info("No transactions yet")
+            st.info("No transactions yet")
         else:
         # Add filters
-        col1, col2 = st.columns(2)
-        with col1:
-            start_date = st.session_state.transactions['Date'].min().date()
-            end_date = st.session_state.transactions['Date'].max().date()
-            date_range = st.date_input(
-                "Select Date Range",
-                [start_date, end_date]
+            col1, col2 = st.columns(2)
+            with col1:
+                start_date = st.session_state.transactions['Date'].min().date()
+                end_date = st.session_state.transactions['Date'].max().date()
+                date_range = st.date_input(
+                    "Select Date Range",
+                    [start_date, end_date]
+                )
+            
+            with col2:
+                transaction_type = st.multiselect(
+                    "Transaction Type",
+                    ["Deposit", "Withdraw"],
+                    ["Deposit", "Withdraw"]
+                )
+            
+            # Apply filters
+            mask = (
+                (st.session_state.transactions['Date'].dt.date >= date_range[0]) &
+                (st.session_state.transactions['Date'].dt.date <= date_range[1]) &
+                (st.session_state.transactions['Type'].isin(transaction_type))
             )
-        
-        with col2:
-            transaction_type = st.multiselect(
-                "Transaction Type",
-                ["Deposit", "Withdraw"],
-                ["Deposit", "Withdraw"]
+            filtered_df = st.session_state.transactions[mask]
+    
+            # Display summary metrics
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                total_deposits = filtered_df[filtered_df['Type'] == 'Deposit']['Amount'].sum()
+                st.metric("Total Deposits", f"RM{total_deposits:.2f}")
+            
+            with col2:
+                total_withdrawals = filtered_df[filtered_df['Type'] == 'Withdraw']['Amount'].sum()
+                st.metric("Total Withdrawals", f"RM{total_withdrawals:.2f}")
+            
+            with col3:
+                net_change = total_deposits - total_withdrawals
+                st.metric("Net Change", f"RM{net_change:.2f}")
+    
+            # Display transaction history
+            st.subheader("Transaction Details")
+            
+            # Format the DataFrame for display
+            display_df = filtered_df.copy()
+            display_df['Date'] = display_df['Date'].dt.strftime('%Y-%m-%d %H:%M')
+            display_df = display_df.sort_values('Date', ascending=False)
+            
+            # Style the DataFrame
+            st.dataframe(
+                display_df.style
+                .format({
+                    'Amount': 'RM{:.2f}'.format,
+                    'Balance_After': 'RM{:.2f}'.format
+                }),
+                use_container_width=True
             )
-        
-        # Apply filters
-        mask = (
-            (st.session_state.transactions['Date'].dt.date >= date_range[0]) &
-            (st.session_state.transactions['Date'].dt.date <= date_range[1]) &
-            (st.session_state.transactions['Type'].isin(transaction_type))
-        )
-        filtered_df = st.session_state.transactions[mask]
-
-        # Display summary metrics
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            total_deposits = filtered_df[filtered_df['Type'] == 'Deposit']['Amount'].sum()
-            st.metric("Total Deposits", f"RM{total_deposits:.2f}")
-        
-        with col2:
-            total_withdrawals = filtered_df[filtered_df['Type'] == 'Withdraw']['Amount'].sum()
-            st.metric("Total Withdrawals", f"RM{total_withdrawals:.2f}")
-        
-        with col3:
-            net_change = total_deposits - total_withdrawals
-            st.metric("Net Change", f"RM{net_change:.2f}")
-
-        # Display transaction history
-        st.subheader("Transaction Details")
-        
-        # Format the DataFrame for display
-        display_df = filtered_df.copy()
-        display_df['Date'] = display_df['Date'].dt.strftime('%Y-%m-%d %H:%M')
-        display_df = display_df.sort_values('Date', ascending=False)
-        
-        # Style the DataFrame
-        st.dataframe(
-            display_df.style
-            .format({
-                'Amount': 'RM{:.2f}'.format,
-                'Balance_After': 'RM{:.2f}'.format
-            }),
-            use_container_width=True
-        )
-
-        # Add export option
-        if st.button("📥 Export Transaction History"):
-            csv = display_df.to_csv(index=False)
-            st.download_button(
-                label="Download CSV",
-                data=csv,
-                file_name=f'transaction_history_{datetime.now().strftime("%Y%m%d")}.csv',
-                mime='text/csv'
-            )
+    
+            # Add export option
+            if st.button("📥 Export Transaction History"):
+                csv = display_df.to_csv(index=False)
+                st.download_button(
+                    label="Download CSV",
+                    data=csv,
+                    file_name=f'transaction_history_{datetime.now().strftime("%Y%m%d")}.csv',
+                    mime='text/csv'
+                )
 
 # Then your existing Summary Statistics code
       if not st.session_state.bets.empty:
