@@ -529,10 +529,11 @@ def main():
     st.markdown("<br>" * 5, unsafe_allow_html=True)
 
     # Tab 4: Transaction History
+  
     with tab4:
         st.subheader("💰 Transaction History")
         
-        if st.session_state.transactions.empty:
+        if 'transactions' not in st.session_state or st.session_state.transactions.empty:
             st.info("No transactions yet")
         else:
             # Add filters
@@ -593,15 +594,7 @@ def main():
                 use_container_width=True
             )
 
-            # Add export option
-            if st.button("📥 Export Transaction History"):
-                csv = display_df.to_csv(index=False)
-                st.download_button(
-                    label="Download CSV",
-                    data=csv,
-                    file_name=f'transaction_history_{datetime.now().strftime("%Y%m%d")}.csv',
-                    mime='text/csv'
-                )
+
 
 if __name__ == "__main__":
     main()
