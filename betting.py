@@ -200,18 +200,45 @@ def main():
     
     # Add/Remove funds
     with st.sidebar.expander("Manage Funds"):
-        action = st.radio("Action", ["Add Funds", "Remove Funds"])
+        action = st.radio("Action", ["Deposit", "Withdraw"])
         amount = st.number_input("Amount (RM)", min_value=0.0, step=10.0)
-        if st.button("Update Bankroll"):
-            if action == "Add Funds":
+        note = st.text_input("Note (optional)")
+        
+        if st.button("Process Transaction"):
+            if action == "Deposit":
                 st.session_state.bankroll += amount
+                transaction_type = "Deposit"
             else:
                 if amount > st.session_state.bankroll:
                     st.error("Insufficient funds!")
-                else:
-                    st.session_state.bankroll -= amount
+                    st.rerun()
+                st.session_state.bankroll -= amount
+                transaction_type = "Withdraw"
+            
+            # Create new transaction
+            new_transaction = pd.DataFrame([{
+                'Date': datetime.now(),
+                'Type': transaction_type,
+                'Amount': amount,
+                'Balance_After': st.session_state.bankroll,
+                'Note': note if note else '-'
+            }])
+            
+            # Initialize transactions if not exists
+            if 'transactions' not in st.session_state:
+                st.session_state.transactions = pd.DataFrame(columns=[
+                    'Date', 'Type', 'Amount', 'Balance_After', 'Note'
+                ])
+            
+            # Add new transaction
+            st.session_state.transactions = pd.concat([
+                st.session_state.transactions, new_transaction
+            ], ignore_index=True)
+            
+            # Save changes
             save_user_bankroll(st.session_state['username'], st.session_state.bankroll)
-            st.success(f"Bankroll updated! New balance: RM{st.session_state.bankroll:.2f}")
+            save_transactions(st.session_state.transactions, st.session_state['username'])
+            st.success(f"{transaction_type} processed successfully!")
             st.rerun()
 
     # Calculate available balance
