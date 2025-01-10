@@ -527,20 +527,23 @@ def main():
     # Add extra space at bottom
     st.markdown("<br>" * 5, unsafe_allow_html=True)
 
+    # Tab 4: Transaction History
     with tab4:
         st.subheader("💰 Transaction History")
         
         if st.session_state.transactions.empty:
             st.info("No transactions yet")
         else:
-            # Filter options
+            # Add filters
             col1, col2 = st.columns(2)
             with col1:
+                start_date = st.session_state.transactions['Date'].min().date()
+                end_date = st.session_state.transactions['Date'].max().date()
                 date_range = st.date_input(
-                    "Date Range",
-                    [st.session_state.transactions['Date'].min().date(),
-                     st.session_state.transactions['Date'].max().date()]
+                    "Select Date Range",
+                    [start_date, end_date]
                 )
+            
             with col2:
                 transaction_type = st.multiselect(
                     "Transaction Type",
@@ -548,40 +551,56 @@ def main():
                     ["Deposit", "Withdraw"]
                 )
             
-            # Filter transactions
-            filtered_transactions = st.session_state.transactions[
+            # Apply filters
+            mask = (
                 (st.session_state.transactions['Date'].dt.date >= date_range[0]) &
                 (st.session_state.transactions['Date'].dt.date <= date_range[1]) &
                 (st.session_state.transactions['Type'].isin(transaction_type))
-            ]
-            
-            # Display summary
+            )
+            filtered_df = st.session_state.transactions[mask]
+
+            # Display summary metrics
             col1, col2, col3 = st.columns(3)
+            
             with col1:
-                total_deposits = filtered_transactions[
-                    filtered_transactions['Type'] == 'Deposit'
-                ]['Amount'].sum()
+                total_deposits = filtered_df[filtered_df['Type'] == 'Deposit']['Amount'].sum()
                 st.metric("Total Deposits", f"RM{total_deposits:.2f}")
             
             with col2:
-                total_withdrawals = filtered_transactions[
-                    filtered_transactions['Type'] == 'Withdraw'
-                ]['Amount'].sum()
+                total_withdrawals = filtered_df[filtered_df['Type'] == 'Withdraw']['Amount'].sum()
                 st.metric("Total Withdrawals", f"RM{total_withdrawals:.2f}")
             
             with col3:
-                net_flow = total_deposits - total_withdrawals
-                st.metric("Net Flow", f"RM{net_flow:.2f}")
+                net_change = total_deposits - total_withdrawals
+                st.metric("Net Change", f"RM{net_change:.2f}")
+
+            # Display transaction history
+            st.subheader("Transaction Details")
             
-            # Display transactions table
+            # Format the DataFrame for display
+            display_df = filtered_df.copy()
+            display_df['Date'] = display_df['Date'].dt.strftime('%Y-%m-%d %H:%M')
+            display_df = display_df.sort_values('Date', ascending=False)
+            
+            # Style the DataFrame
             st.dataframe(
-                filtered_transactions.sort_values('Date', ascending=False)
-                .style.format({
+                display_df.style
+                .format({
                     'Amount': 'RM{:.2f}'.format,
                     'Balance_After': 'RM{:.2f}'.format
                 }),
                 use_container_width=True
             )
+
+            # Add export option
+            if st.button("📥 Export Transaction History"):
+                csv = display_df.to_csv(index=False)
+                st.download_button(
+                    label="Download CSV",
+                    data=csv,
+                    file_name=f'transaction_history_{datetime.now().strftime("%Y%m%d")}.csv',
+                    mime='text/csv'
+                )
 
 if __name__ == "__main__":
     main()
