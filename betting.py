@@ -480,54 +480,6 @@ def main():
                                 st.session_state.confirm_delete = idx
                                 st.rerun()
 
-    # Display Summary Statistics
-    if not st.session_state.bets.empty:
-        st.header("📈 Summary Statistics")
-        
-        col1, col2, col3, col4 = st.columns(4)
-        
-        completed_bets = st.session_state.bets[st.session_state.bets['Result'] != 'Pending']
-        total_profit = completed_bets['Profit/Loss'].sum()
-        total_stake = completed_bets['Stake'].sum()
-        roi = (total_profit / total_stake * 100) if total_stake > 0 else 0
-        
-        with col1:
-            st.metric("🎯 Total Bets", len(st.session_state.bets))
-        with col2:
-            st.metric("💵 Total Stake", f"RM{total_stake:.2f}")
-        with col3:
-            st.metric("💰 Total Profit/Loss", f"RM{total_profit:.2f}")
-        with col4:
-            st.metric("📊 ROI", f"{roi:.1f}%")
-        
-        # Sport-wise breakdown
-        st.subheader("🏆 Sport-wise Performance")
-        sport_stats = completed_bets.groupby('Sport').agg({
-            'Profit/Loss': 'sum',
-            'Result': lambda x: (x == 'Win').sum() / len(x) * 100 if len(x) > 0 else 0
-        }).round(2)
-        sport_stats.columns = ['Profit/Loss (RM)', 'Win Rate (%)']
-        st.dataframe(sport_stats)
-        
-        # Display all bets with proper date sorting
-        st.header("📚 All Bets History")
-        display_df = st.session_state.bets.copy()
-        display_df['Date'] = pd.to_datetime(display_df['Date'])
-        display_df = display_df.sort_values('Date', ascending=False)
-        display_df['Date'] = display_df['Date'].dt.strftime('%Y-%m-%d')
-        st.dataframe(display_df, use_container_width=True)
-        
-        # Add backup capability
-        if st.button("📥 Backup Data"):
-            backup_filename = f"betting_history_backup_{st.session_state['username']}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-            df_to_save = st.session_state.bets.copy()
-            df_to_save['Date'] = pd.to_datetime(df_to_save['Date']).dt.strftime('%Y-%m-%d')
-            df_to_save.to_csv(backup_filename, index=False)
-            st.success(f"✅ Data backed up to {backup_filename}!")
-
-    # Add extra space at bottom
-    st.markdown("<br>" * 5, unsafe_allow_html=True)
-
 
 # Add Tab 4 right here, before the Summary Statistics
     with tab4:
@@ -605,10 +557,52 @@ def main():
             )
 
 # Then your existing Summary Statistics code
-if not st.session_state.bets.empty:
-    st.header("📈 Summary Statistics")
-    # Rest of your existing code...
+  if not st.session_state.bets.empty:
+        st.header("📈 Summary Statistics")
+        
+        col1, col2, col3, col4 = st.columns(4)
+        
+        completed_bets = st.session_state.bets[st.session_state.bets['Result'] != 'Pending']
+        total_profit = completed_bets['Profit/Loss'].sum()
+        total_stake = completed_bets['Stake'].sum()
+        roi = (total_profit / total_stake * 100) if total_stake > 0 else 0
+        
+        with col1:
+            st.metric("🎯 Total Bets", len(st.session_state.bets))
+        with col2:
+            st.metric("💵 Total Stake", f"RM{total_stake:.2f}")
+        with col3:
+            st.metric("💰 Total Profit/Loss", f"RM{total_profit:.2f}")
+        with col4:
+            st.metric("📊 ROI", f"{roi:.1f}%")
+        
+        # Sport-wise breakdown
+        st.subheader("🏆 Sport-wise Performance")
+        sport_stats = completed_bets.groupby('Sport').agg({
+            'Profit/Loss': 'sum',
+            'Result': lambda x: (x == 'Win').sum() / len(x) * 100 if len(x) > 0 else 0
+        }).round(2)
+        sport_stats.columns = ['Profit/Loss (RM)', 'Win Rate (%)']
+        st.dataframe(sport_stats)
+        
+        # Display all bets with proper date sorting
+        st.header("📚 All Bets History")
+        display_df = st.session_state.bets.copy()
+        display_df['Date'] = pd.to_datetime(display_df['Date'])
+        display_df = display_df.sort_values('Date', ascending=False)
+        display_df['Date'] = display_df['Date'].dt.strftime('%Y-%m-%d')
+        st.dataframe(display_df, use_container_width=True)
+        
+        # Add backup capability
+        if st.button("📥 Backup Data"):
+            backup_filename = f"betting_history_backup_{st.session_state['username']}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+            df_to_save = st.session_state.bets.copy()
+            df_to_save['Date'] = pd.to_datetime(df_to_save['Date']).dt.strftime('%Y-%m-%d')
+            df_to_save.to_csv(backup_filename, index=False)
+            st.success(f"✅ Data backed up to {backup_filename}!")
 
+    # Add extra space at bottom
+    st.markdown("<br>" * 5, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
