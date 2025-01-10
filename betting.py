@@ -204,7 +204,7 @@ def main():
     st.title(f"💰 Betting Tracker - {st.session_state['username']} 💸")
 
     # Bankroll Management in Sidebar
-     st.sidebar.markdown("---")
+    st.sidebar.markdown("---")
     st.sidebar.header("💰 Bankroll Management")
     
     # Initialize transactions
