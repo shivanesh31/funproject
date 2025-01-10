@@ -531,7 +531,7 @@ def main():
 
 # Add Tab 4 right here, before the Summary Statistics
     with tab4:
-    st.subheader("💰 Transaction History")
+        st.subheader("💰 Transaction History")
     
     if 'transactions' not in st.session_state or st.session_state.transactions.empty:
         st.info("No transactions yet")
