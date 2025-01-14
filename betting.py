@@ -5,7 +5,29 @@ import os
 import hashlib
 import json
 
-# Helper Functions
+def save_session_state(username):
+    """Save session state to file"""
+    try:
+        session_data = {
+            'username': username,
+            'last_login': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }
+        with open('session_state.json', 'w') as f:
+            json.dump(session_data, f)
+    except Exception as e:
+        st.error(f"Error saving session state: {e}")
+
+def load_session_state():
+    """Load session state from file"""
+    try:
+        if os.path.exists('session_state.json'):
+            with open('session_state.json', 'r') as f:
+                session_data = json.load(f)
+                return session_data
+        return None
+    except Exception:
+        return None
+
 def make_hashed_password(password):
     """Create hashed password"""
     return hashlib.sha256(str.encode(password)).hexdigest()
@@ -111,7 +133,6 @@ def save_transactions(df, username):
         df_to_save.to_csv(filename, index=False)
     except Exception as e:
         st.error(f"Error saving transactions: {e}")
-        
 
 # Login Page Function
 def login_page():
@@ -131,6 +152,12 @@ def login_page():
                 if username in users and check_password(password, users[username]):
                     st.session_state['logged_in'] = True
                     st.session_state['username'] = username
+                    # Save session state
+                    save_session_state(username)
+                    # Load user data
+                    st.session_state.transactions = load_transactions(username)
+                    st.session_state.bets = load_data(username)
+                    st.session_state.bankroll = get_user_bankroll(username)
                     st.rerun()
                 else:
                     st.error("Invalid username or password")
@@ -156,6 +183,11 @@ def login_page():
                 users[new_username] = make_hashed_password(new_password)
                 save_users(users)
                 save_user_bankroll(new_username, initial_bankroll)
+                # Initialize empty transactions for new user
+                empty_transactions = pd.DataFrame(columns=[
+                    'Date', 'Type', 'Amount', 'Balance_After', 'Note'
+                ])
+                save_transactions(empty_transactions, new_username)
                 st.success("Registration successful! Please login.")
 
 def calculate_profit(stake, odds, result):
@@ -168,8 +200,18 @@ def calculate_profit(stake, odds, result):
 
 # Main Application Function
 def main():
+    # Check for existing session
     if 'logged_in' not in st.session_state:
-        st.session_state['logged_in'] = False
+        session_data = load_session_state()
+        if session_data:
+            username = session_data['username']
+            st.session_state['logged_in'] = True
+            st.session_state['username'] = username
+            st.session_state.transactions = load_transactions(username)
+            st.session_state.bets = load_data(username)
+            st.session_state.bankroll = get_user_bankroll(username)
+        else:
+            st.session_state['logged_in'] = False
 
     if not st.session_state['logged_in']:
         login_page()
@@ -177,15 +219,23 @@ def main():
 
     # Add logout button
     if st.sidebar.button("Logout"):
+        # Save all data before logging out
+        save_transactions(st.session_state.transactions, st.session_state['username'])
+        save_data(st.session_state.bets, st.session_state['username'])
+        save_user_bankroll(st.session_state['username'], st.session_state.bankroll)
+        
+        # Remove session file
+        if os.path.exists('session_state.json'):
+            os.remove('session_state.json')
+            
         st.session_state['logged_in'] = False
         st.session_state['username'] = None
         st.rerun()
 
-    # Initialize session state for storing bets
+    # Initialize session states
     if 'bets' not in st.session_state:
         st.session_state.bets = load_data(st.session_state['username'])
     
-    # Initialize bankroll
     if 'bankroll' not in st.session_state:
         st.session_state.bankroll = get_user_bankroll(st.session_state['username'])
     
