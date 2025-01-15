@@ -124,6 +124,29 @@ def save_transactions(df, username):
         df_to_save.to_csv(filename, index=False)
     except Exception as e:
         st.error(f"Error saving transactions: {e}")
+        
+def save_session_state(username):
+    """Save session state to file"""
+    try:
+        session_data = {
+            'username': username,
+            'last_login': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }
+        with open('session_state.json', 'w') as f:
+            json.dump(session_data, f)
+    except Exception as e:
+        st.error(f"Error saving session state: {e}")
+
+def load_session_state():
+    """Load session state from file"""
+    try:
+        if os.path.exists('session_state.json'):
+            with open('session_state.json', 'r') as f:
+                session_data = json.load(f)
+                return session_data
+        return None
+    except Exception:
+        return None
 
 # Login Page Function
 def login_page():
