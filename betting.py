@@ -198,7 +198,7 @@ def main():
         st.rerun()
 
     # Initialize session states
-     if 'transactions' not in st.session_state:
+    if 'transactions' not in st.session_state:
         st.session_state.transactions = load_transactions(st.session_state['username'])
     
     if 'bets' not in st.session_state:
