@@ -5,6 +5,24 @@ import os
 import hashlib
 import json
 
+def load_users():
+    """Load user data"""
+    try:
+        if os.path.exists('users.json'):
+            with open('users.json', 'r') as f:
+                return json.load(f)
+        return {}
+    except Exception:
+        return {}
+
+def save_users(users):
+    """Save user data"""
+    try:
+        with open('users.json', 'w') as f:
+            json.dump(users, f)
+    except Exception as e:
+        st.error(f"Error saving users: {e}")
+
 def get_user_file(username):
     """Get filename for user's betting data"""
     return f'betting_data_{username}.csv'
