@@ -5,6 +5,14 @@ import os
 import hashlib
 import json
 
+def make_hashed_password(password):
+    """Create hashed password"""
+    return hashlib.sha256(str.encode(password)).hexdigest()
+
+def check_password(password, hashed_password):
+    """Verify password"""
+    return make_hashed_password(password) == hashed_password
+
 def load_users():
     """Load user data"""
     try:
