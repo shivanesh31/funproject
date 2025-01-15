@@ -5,53 +5,17 @@ import os
 import hashlib
 import json
 
-def save_session_state(username):
-    """Save session state to file"""
-    try:
-        session_data = {
-            'username': username,
-            'last_login': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        }
-        with open('session_state.json', 'w') as f:
-            json.dump(session_data, f)
-    except Exception as e:
-        st.error(f"Error saving session state: {e}")
-
-def load_session_state():
-    """Load session state from file"""
-    try:
-        if os.path.exists('session_state.json'):
-            with open('session_state.json', 'r') as f:
-                session_data = json.load(f)
-                return session_data
-        return None
-    except Exception:
-        return None
-
-def make_hashed_password(password):
-    """Create hashed password"""
-    return hashlib.sha256(str.encode(password)).hexdigest()
-
-def check_password(password, hashed_password):
-    """Verify password"""
-    return make_hashed_password(password) == hashed_password
-
-def load_users():
-    """Load user data"""
-    if os.path.exists('users.json'):
-        with open('users.json', 'r') as f:
-            return json.load(f)
-    return {}
-
-def save_users(users):
-    """Save user data"""
-    with open('users.json', 'w') as f:
-        json.dump(users, f)
-
 def get_user_file(username):
     """Get filename for user's betting data"""
     return f'betting_data_{username}.csv'
 
+def get_user_bankroll_file(username):
+    """Get filename for user's bankroll"""
+    return f'bankroll_{username}.json'
+
+def get_user_transactions_file(username):
+    """Get filename for user's transactions"""
+    return f'transactions_{username}.csv'
 
 def load_data(username):
     """Load betting data for specific user"""
@@ -71,7 +35,7 @@ def load_data(username):
         ])
 
 def save_data(df, username):
-    """Save betting data for specific user"""
+    """Save betting data"""
     try:
         filename = get_user_file(username)
         df_to_save = df.copy()
@@ -84,8 +48,9 @@ def save_data(df, username):
 def get_user_bankroll(username):
     """Load user's bankroll data"""
     try:
-        if os.path.exists('bankroll.json'):
-            with open('bankroll.json', 'r') as f:
+        filename = get_user_bankroll_file(username)
+        if os.path.exists(filename):
+            with open(filename, 'r') as f:
                 bankrolls = json.load(f)
                 return bankrolls.get(username, 0)
         return 0
@@ -95,21 +60,21 @@ def get_user_bankroll(username):
 def save_user_bankroll(username, amount):
     """Save user's bankroll data"""
     try:
+        filename = get_user_bankroll_file(username)
         bankrolls = {}
-        if os.path.exists('bankroll.json'):
-            with open('bankroll.json', 'r') as f:
+        if os.path.exists(filename):
+            with open(filename, 'r') as f:
                 bankrolls = json.load(f)
         bankrolls[username] = amount
-        with open('bankroll.json', 'w') as f:
+        with open(filename, 'w') as f:
             json.dump(bankrolls, f)
     except Exception as e:
         st.error(f"Error saving bankroll: {e}")
 
-
 def load_transactions(username):
     """Load transaction history for user"""
     try:
-        filename = f'transactions_{username}.csv'
+        filename = get_user_transactions_file(username)
         if os.path.exists(filename):
             df = pd.read_csv(filename)
             df['Date'] = pd.to_datetime(df['Date'])
@@ -126,7 +91,7 @@ def load_transactions(username):
 def save_transactions(df, username):
     """Save transaction history"""
     try:
-        filename = f'transactions_{username}.csv'
+        filename = get_user_transactions_file(username)
         df_to_save = df.copy()
         if not df_to_save.empty:
             df_to_save['Date'] = pd.to_datetime(df_to_save['Date']).dt.strftime('%Y-%m-%d %H:%M:%S')
@@ -233,6 +198,9 @@ def main():
         st.rerun()
 
     # Initialize session states
+     if 'transactions' not in st.session_state:
+        st.session_state.transactions = load_transactions(st.session_state['username'])
+    
     if 'bets' not in st.session_state:
         st.session_state.bets = load_data(st.session_state['username'])
     
