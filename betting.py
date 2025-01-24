@@ -14,14 +14,18 @@ def check_password(password, hashed_password):
     return make_hashed_password(password) == hashed_password
 
 def load_users():
-    """Load user data"""
+    """Load user data with persistence"""
     try:
-        if os.path.exists('users.json'):
-            with open('users.json', 'r') as f:
-                return json.load(f)
-        return {}
+        if not os.path.exists('users.json'):
+            default_users = {
+                st.secrets["DEFAULT_USERNAME"]: make_hashed_password(st.secrets["DEFAULT_PASSWORD"])
+            }
+            with open('users.json', 'w') as f:
+                json.dump(default_users, f)
+        with open('users.json', 'r') as f:
+            return json.load(f)
     except Exception:
-        return {}
+        return {st.secrets["DEFAULT_USERNAME"]: make_hashed_password(st.secrets["DEFAULT_PASSWORD"])}
 
 def save_users(users):
     """Save user data"""
