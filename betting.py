@@ -16,15 +16,35 @@ def check_password(password, hashed_password):
 def load_users():
     """Load user data with persistence"""
     try:
+        default_username = st.secrets["DEFAULT_USERNAME"]
         if not os.path.exists('users.json'):
+            # Create default user
             default_users = {
-                st.secrets["DEFAULT_USERNAME"]: make_hashed_password(st.secrets["DEFAULT_PASSWORD"])
+                default_username: make_hashed_password(st.secrets["DEFAULT_PASSWORD"])
             }
             with open('users.json', 'w') as f:
                 json.dump(default_users, f)
+            
+            # Initialize default user's data files if they don't exist
+            if not os.path.exists(get_user_file(default_username)):
+                empty_bets = pd.DataFrame(columns=[
+                    'Date', 'Sport', 'Match', 'Bet Type', 'Stake', 'Odds', 'Result', 'Profit/Loss'
+                ])
+                save_data(empty_bets, default_username)
+            
+            if not os.path.exists(get_user_transactions_file(default_username)):
+                empty_transactions = pd.DataFrame(columns=[
+                    'Date', 'Type', 'Amount', 'Balance_After', 'Note'
+                ])
+                save_transactions(empty_transactions, default_username)
+            
+            if not os.path.exists(get_user_bankroll_file(default_username)):
+                save_user_bankroll(default_username, 0)  # or whatever initial bankroll you want
+                
         with open('users.json', 'r') as f:
             return json.load(f)
     except Exception:
+        # If anything fails, return default user
         return {st.secrets["DEFAULT_USERNAME"]: make_hashed_password(st.secrets["DEFAULT_PASSWORD"])}
 
 def save_users(users):
